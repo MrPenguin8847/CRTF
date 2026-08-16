@@ -1925,10 +1925,12 @@ function openAssistant() {
   // Refresh context every time the panel opens
   renderAssistantContext();
   document.getElementById('assistantOverlay').classList.add('open');
+  document.getElementById('fabBtn').style.display = 'none';
   setTimeout(() => document.getElementById('chatInput').focus(), 350);
 }
 function closeAssistant() {
   document.getElementById('assistantOverlay').classList.remove('open');
+  document.getElementById('fabBtn').style.display = '';
 }
 
 // ==========================================
