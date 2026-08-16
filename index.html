@@ -443,6 +443,29 @@
     }
     .example-chip:hover { border-color: #4D90D4; color: #6AAAE0; background: rgba(77,144,212,0.08); }
 
+    /* RECENTLY VIEWED */
+    .recent-strip { margin-bottom: 24px; display: none; }
+    .recent-strip.visible { display: block; }
+    .recent-strip-label {
+      font-size: 0.72rem; color: #55585F; margin-bottom: 8px;
+      font-weight: 500; display: flex; align-items: center; gap: 5px;
+    }
+    .recent-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .recent-chip {
+      background: #13161D; border: 1px solid #272B34;
+      color: #8A8D93; border-radius: 7px;
+      padding: 5px 12px 5px 10px; font-size: 0.76rem;
+      font-family: 'Courier New', monospace;
+      cursor: pointer; transition: border-color 0.15s, color 0.15s;
+      display: flex; align-items: center; gap: 7px;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 280px;
+    }
+    .recent-chip:hover { border-color: #374151; color: #E8E9EB; }
+    .recent-dot {
+      width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+    }
+
     .search-info-row {
       display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
       margin-top: 40px;
@@ -1054,6 +1077,15 @@
             <p class="search-error-msg" id="search-error-msg" role="alert" aria-live="polite"></p>
           </div>
 
+          <!-- RECENTLY VIEWED -->
+          <div id="recent-strip" class="recent-strip" aria-label="Recently viewed wallets">
+            <div class="recent-strip-label">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+              Recently viewed
+            </div>
+            <div class="recent-chips" id="recent-chips" role="list"></div>
+          </div>
+
           <p class="example-label">Example wallet addresses &mdash; click to analyze:</p>
           <div class="example-chips" id="example-chips" role="list" aria-label="Example wallets">
             <div class="example-chip" role="listitem" tabindex="0" onclick="selectChip(this)" data-wallet="0x7fC2a9B4d8E1c6A3f0D5b7E9a1C4d6F8b2E0a3C7">0x7fC2a9B4d8E1c6A3f0D5b7E9a1C4d6F8b2E0a3C7</div>
@@ -1436,6 +1468,49 @@ let graphNodes = [];
 let graphEdges = [];
 let hoveredNode = null;
 let flaggedCases = []; // array of { address, timestamp }
+let recentHistory = []; // array of wallet address strings, most recent first, max 3
+
+// ==========================================
+// RECENTLY VIEWED
+// ==========================================
+function addToRecent(address) {
+  // Dedupe: remove if already present
+  recentHistory = recentHistory.filter(a => a !== address);
+  // Prepend
+  recentHistory.unshift(address);
+  // Cap at 3
+  if (recentHistory.length > 3) recentHistory.pop();
+  renderRecentChips();
+}
+
+function renderRecentChips() {
+  const strip = document.getElementById('recent-strip');
+  const container = document.getElementById('recent-chips');
+  if (recentHistory.length === 0) {
+    strip.classList.remove('visible');
+    return;
+  }
+  strip.classList.add('visible');
+  container.innerHTML = recentHistory.map(addr => {
+    const data = WALLETS[addr];
+    const { color } = riskMeta(data.score);
+    const shortAddr = addr.slice(0, 8) + '\u2026' + addr.slice(-6);
+    return `
+      <div class="recent-chip" role="listitem" tabindex="0"
+        onclick="selectRecentChip('${addr}')"
+        onkeydown="if(event.key==='Enter')selectRecentChip('${addr}')"
+        title="${addr}">
+        <span class="recent-dot" style="background:${color}"></span>
+        ${shortAddr}
+      </div>`;
+  }).join('');
+}
+
+function selectRecentChip(address) {
+  document.getElementById('wallet-input').value = address;
+  clearSearchError();
+  analyzeWallet();
+}
 
 // ==========================================
 // CASE TRACKING
@@ -1585,6 +1660,7 @@ function analyzeWallet() {
     return;
   }
   clearSearchError();
+  addToRecent(key);
 
   // Show skeleton immediately
   showScreen('loading');
