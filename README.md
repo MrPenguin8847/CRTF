@@ -1,7 +1,7 @@
 # FlowTrace
-**Wallet Risk Intelligence for Indian Law Enforcement**
+**Wallet Risk Intelligence for Law Enforcement Investigators**
 
-FlowTrace is a prototype web application designed for the **Chandigarh Police Hackathon 2026 (Track 5: Cybercrime & Digital Forensics)**. It provides a highly visual, enterprise-grade dashboard for investigators to rapidly assess cryptocurrency wallet risk, trace transaction flows, and generate case-ready reports—all without requiring deep blockchain expertise.
+FlowTrace is a prototype web application that provides a highly visual, enterprise-grade dashboard for investigators to rapidly assess cryptocurrency wallet risk, trace transaction flows, and generate case-ready reports—all without requiring deep blockchain expertise.
 
 > **Note**: This is a frontend prototype and interactive demo. It uses mock data for wallet profiles to demonstrate the investigative workflow and is not currently connected to live blockchain nodes.
 
@@ -70,4 +70,4 @@ Once the app is running, use one of the pre-configured mock wallet addresses on 
 
 ## Project Status
 
-This project was built specifically for the **Chandigarh Police Hackathon 2026** by the PEC Chandigarh team. It serves as a proof-of-concept for how modern UI/UX and LLM integrations can lower the barrier to entry for digital forensics investigations.
+FlowTrace is a proof-of-concept prototype demonstrating how modern UI/UX and LLM integrations can lower the barrier to entry for digital forensics investigations.

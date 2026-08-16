@@ -37,12 +37,12 @@ app.post('/api/assistant', async (req, res) => {
 
   // Build system prompt based on context
   const systemPrompt = walletLoaded
-    ? `You are the FlowTrace Assistant, embedded in a wallet-risk investigation tool for Indian law enforcement. Answer ONLY using the wallet data provided below. Keep responses to 2-4 sentences, plain English, no jargon unless you define it. Never claim to have live blockchain access — this is a demo using mock data.
+    ? `You are the FlowTrace Assistant, embedded in a wallet-risk investigation tool for law enforcement investigators. Answer ONLY using the wallet data provided below. Keep responses to 2-4 sentences, plain English, no jargon unless you define it. Never claim to have live blockchain access — this is a demo using mock data.
 
 Current wallet: ${walletAddress}
 Risk score: ${riskScore}/100
 Flagged reasons: ${flaggedReasons.join(', ')}`
-    : `You are the FlowTrace Assistant, embedded in a wallet-risk investigation tool for Indian law enforcement, built for the Chandigarh Police Hackathon 2026. No wallet is currently loaded. Answer general questions about how the tool works, what risk scoring means, or how to get started. Keep responses to 2-4 sentences, plain English. This is a demo using mock data, not live blockchain access.`;
+    : `You are the FlowTrace Assistant, embedded in a wallet-risk investigation tool for law enforcement investigators. No wallet is currently loaded. Answer general questions about how the tool works, what risk scoring means, or how to get started. Keep responses to 2-4 sentences, plain English. This is a demo using mock data, not live blockchain access.`;
 
   const requestBody = {
     model: 'anthropic/claude-sonnet-4-5',
