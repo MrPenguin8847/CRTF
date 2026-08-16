@@ -1,0 +1,1772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>FlowTrace — Wallet Risk Intelligence for Indian Law Enforcement</title>
+  <meta name="description" content="FlowTrace helps Indian law enforcement investigators quickly assess wallet risk, visualize transaction flows, and generate investigation reports — no blockchain expertise required." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ==========================================
+       DESIGN TOKENS
+    ========================================== */
+    :root {
+      /* Dark theme palette — enterprise security tool */
+      --bg: #0F1115;           /* near-black page canvas */
+      --surface: #1A1D23;      /* cards / panels, one step lighter */
+      --border: #272B34;       /* hairline, barely visible */
+      --border-hover: #363B47; /* border on interactive hover */
+      --text-primary: #E8E9EB; /* off-white body text  ~16:1 contrast */
+      --text-secondary: #8A8D93; /* muted labels / captions */
+      --text-tertiary: #55585F;  /* very muted timestamps etc. */
+      --accent: #4D90D4;        /* blue — 5.8:1 on --bg, 5.3:1 on --surface */
+      --accent-light: #0E1E30;  /* subtle tinted bg for pills/icons */
+      --accent-mid: #3A7ABE;    /* pressed / visited accent */
+      --accent-hover: #6AAAE0;  /* lighter blue on hover */
+      --risk-green: #4ADE80;    /* bright green on dark bg */
+      --risk-green-bg: #0D2016; /* dark green tint */
+      --risk-amber: #FBBF24;    /* amber — clearly readable on dark */
+      --risk-amber-bg: #1F180A; /* dark amber tint */
+      --risk-red: #F87171;      /* bright red on dark bg */
+      --risk-red-bg: #1F0D0D;   /* dark red tint */
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --shadow-card: 0 1px 3px rgba(0,0,0,0.3), 0 1px 2px rgba(0,0,0,0.2);
+      --shadow-elevated: 0 4px 20px rgba(0,0,0,0.5), 0 1px 6px rgba(0,0,0,0.3);
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; font-size: 16px; }
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text-primary);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: var(--accent); text-decoration: none; }
+    button { cursor: pointer; font-family: var(--font); border: none; outline: none; }
+    input { font-family: var(--font); }
+
+    .container { max-width: 1120px; margin: 0 auto; padding: 0 40px; }
+    .section { padding: 80px 0; }
+
+    /* TOPNAV */
+    .topnav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(15,17,21,0.92);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+      padding: 0 40px;
+    }
+    .topnav-inner {
+      max-width: 1120px; margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between;
+      height: 60px;
+    }
+    .topnav-logo {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: 1.05rem; color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+    .topnav-logo-icon {
+      width: 30px; height: 30px;
+      background: var(--accent);
+      border-radius: 7px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .topnav-logo-icon svg { width: 18px; height: 18px; }
+    .topnav-cta {
+      background: var(--accent); color: #fff;
+      padding: 8px 20px; border-radius: 7px;
+      font-weight: 600; font-size: 0.875rem;
+      transition: background 0.15s;
+    }
+    .topnav-cta:hover { background: var(--accent-hover); }
+
+    /* HERO */
+    .hero {
+      padding: 110px 0 100px;
+      background: var(--bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .hero-inner { max-width: 1120px; margin: 0 auto; padding: 0 40px; text-align: center; }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent-light); color: var(--accent);
+      border: 1px solid #1C3250; border-radius: 100px;
+      padding: 6px 14px; font-size: 0.8rem; font-weight: 600;
+      margin-bottom: 32px; letter-spacing: 0.02em;
+    }
+    .hero-badge-dot {
+      width: 6px; height: 6px; background: var(--accent);
+      border-radius: 50%; flex-shrink: 0;
+    }
+    .hero h1 {
+      font-size: clamp(2.4rem, 4vw, 3.5rem);
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      color: var(--text-primary);
+      max-width: 760px; margin: 0 auto 20px;
+    }
+    .hero h1 span { color: var(--accent); }
+    .hero-sub {
+      font-size: 1.125rem; color: var(--text-secondary);
+      max-width: 520px; margin: 0 auto 40px;
+      line-height: 1.65;
+    }
+    .hero-actions { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      padding: 14px 32px; border-radius: 9px;
+      font-weight: 700; font-size: 1rem;
+      transition: background 0.15s, transform 0.1s;
+      box-shadow: 0 2px 10px rgba(77,144,212,0.22);
+    }
+    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+    .hero-microcopy { font-size: 0.8rem; color: var(--text-tertiary); }
+
+    /* TRUST BAR */
+    .trust-bar {
+      padding: 24px 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+    .trust-bar-inner {
+      max-width: 1120px; margin: 0 auto; padding: 0 40px;
+      display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
+    }
+    .trust-label {
+      font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary);
+      text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap;
+    }
+    .trust-divider { width: 1px; height: 18px; background: var(--border); }
+    .trust-badges { display: flex; gap: 10px; flex-wrap: wrap; }
+    .trust-badge {
+      display: inline-block;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 5px 12px;
+      font-size: 0.8rem; font-weight: 500; color: var(--text-secondary);
+    }
+
+    /* STAT ROW */
+    .stat-row {
+      padding: 64px 0;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+    .stat-row-inner {
+      max-width: 1120px; margin: 0 auto; padding: 0 40px;
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 0;
+    }
+    .stat-item {
+      text-align: center;
+      padding: 32px 24px;
+      border-right: 1px solid var(--border);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-number {
+      font-size: 3.5rem; font-weight: 800; color: var(--accent);
+      letter-spacing: -0.04em; line-height: 1;
+      margin-bottom: 10px;
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-label { font-size: 0.875rem; color: var(--text-secondary); font-weight: 500; }
+
+    /* HOW IT WORKS */
+    .how-it-works { padding: 88px 0; border-bottom: 1px solid var(--border); }
+    .section-label {
+      font-size: 0.75rem; font-weight: 700; color: var(--accent);
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(1.6rem, 2.5vw, 2.2rem);
+      font-weight: 700; letter-spacing: -0.025em;
+      color: var(--text-primary); margin-bottom: 56px;
+    }
+    .how-grid {
+      display: grid; grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+    .how-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 40px 32px;
+      text-align: center;
+      position: relative;
+    }
+    .how-step {
+      position: absolute; top: 20px; left: 20px;
+      font-size: 0.75rem; font-weight: 700; color: var(--text-tertiary);
+    }
+    .how-icon {
+      width: 52px; height: 52px; margin: 0 auto 20px;
+      background: var(--accent-light);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .how-icon svg { width: 26px; height: 26px; color: var(--accent); }
+    .how-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; }
+    .how-desc { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; }
+
+    /* FEATURE GRID */
+    .features { padding: 88px 0; border-bottom: 1px solid var(--border); }
+    .feature-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+    .feature-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-md);
+      padding: 28px 24px;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+    .feature-card:hover {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(77,144,212,0.12);
+    }
+    .feature-icon {
+      width: 42px; height: 42px;
+      background: var(--accent-light);
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 18px;
+    }
+    .feature-icon svg { width: 22px; height: 22px; color: var(--accent); }
+    .feature-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; }
+    .feature-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.55; }
+
+    /* TOOL SECTION */
+    .tool-section { padding: 88px 0; background: var(--bg); }
+    .tool-section .section-title { margin-bottom: 10px; }
+
+    /* TOOL CONTAINER — contained dark panel inside dark page */
+    .tool-container {
+      background: #0B0D11;      /* slightly deeper than page, creates depth */
+      border-radius: 16px;
+      border: 1px solid #272B34;
+      overflow: hidden;
+      box-shadow: 0 0 0 1px #1C2030, 0 24px 64px rgba(0,0,0,0.5);
+      position: relative;
+      min-height: 620px;
+    }
+    .tool-chrome {
+      background: #13161D;
+      border-bottom: 1px solid #272B34;
+      padding: 14px 20px;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .chrome-dots { display: flex; gap: 6px; }
+    .chrome-dot { width: 12px; height: 12px; border-radius: 50%; }
+    .chrome-dot.red { background: #FF5F57; }
+    .chrome-dot.yellow { background: #FEBC2E; }
+    .chrome-dot.green { background: #28C840; }
+    .chrome-title {
+      flex: 1; text-align: center;
+      font-size: 0.8rem; color: #55585F; font-weight: 500;
+    }
+    .chrome-badge {
+      font-size: 0.7rem; font-weight: 600; color: #4D90D4;
+      background: rgba(77,144,212,0.12);
+      border: 1px solid rgba(77,144,212,0.25);
+      border-radius: 4px; padding: 2px 8px;
+    }
+    .tool-inner { padding: 0; position: relative; }
+
+    /* SEARCH SCREEN */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    #screen-search { padding: 56px 48px; }
+    .tool-header { margin-bottom: 40px; }
+    .tool-logo {
+      display: inline-flex; align-items: center; gap: 10px;
+      font-weight: 800; font-size: 1.4rem; color: #E8E9EB;
+      letter-spacing: -0.02em; margin-bottom: 8px;
+    }
+    .tool-logo-icon {
+      width: 34px; height: 34px; background: #3A7ABE;
+      border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    }
+    .tool-logo-icon svg { width: 18px; height: 18px; }
+    .tool-tagline { font-size: 0.875rem; color: #8A8D93; }
+
+    .search-box { margin-bottom: 32px; }
+    .search-input-row { display: flex; gap: 12px; }
+    .search-input {
+      flex: 1;
+      background: #1A1D23; border: 1px solid #272B34;
+      border-radius: 10px; padding: 14px 20px;
+      color: #E8E9EB; font-size: 0.95rem;
+      transition: border-color 0.2s;
+    }
+    .search-input::placeholder { color: #3D4049; }
+    .search-input:focus { outline: none; border-color: #4D90D4; }
+    .search-btn {
+      background: #3A7ABE; color: #fff;
+      border-radius: 10px; padding: 14px 28px;
+      font-weight: 700; font-size: 0.95rem;
+      transition: background 0.15s;
+      display: flex; align-items: center; gap: 8px;
+    }
+    .search-btn:hover { background: #4D90D4; }
+
+    .example-label { font-size: 0.78rem; color: #55585F; margin-bottom: 12px; font-weight: 500; }
+    .example-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .example-chip {
+      background: #1A1D23; border: 1px solid #272B34;
+      color: #8A8D93; border-radius: 7px;
+      padding: 7px 14px; font-size: 0.78rem; font-family: 'Courier New', monospace;
+      cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      max-width: 300px;
+    }
+    .example-chip:hover { border-color: #4D90D4; color: #6AAAE0; background: rgba(77,144,212,0.08); }
+
+    .search-info-row {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+      margin-top: 40px;
+    }
+    .search-info-card {
+      background: #1A1D23; border: 1px solid #272B34; border-radius: 10px;
+      padding: 20px;
+    }
+    .search-info-card-title { font-size: 0.8rem; color: #8A8D93; font-weight: 600; margin-bottom: 6px; }
+    .search-info-card-val { font-size: 1.5rem; font-weight: 800; color: #E8E9EB; }
+    .search-info-card-sub { font-size: 0.75rem; color: #3D4049; margin-top: 2px; }
+
+    /* RESULTS SCREEN */
+    #screen-results { padding: 0; }
+    .results-header {
+      background: #13161D; border-bottom: 1px solid #272B34;
+      padding: 18px 40px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .results-back {
+      display: flex; align-items: center; gap: 8px;
+      color: #8A8D93; font-size: 0.85rem; font-weight: 500;
+      cursor: pointer; transition: color 0.15s;
+    }
+    .results-back:hover { color: #E8E9EB; }
+    .results-back svg { width: 16px; height: 16px; }
+    .results-wallet-id {
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem; color: #8A8D93;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .results-wallet-id strong { color: #E8E9EB; }
+    .copy-btn {
+      background: none; border: 1px solid #272B34; border-radius: 5px;
+      padding: 4px 8px; color: #55585F; font-size: 0.75rem;
+      cursor: pointer; transition: color 0.15s, border-color 0.15s;
+      display: flex; align-items: center; gap: 4px;
+    }
+    .copy-btn:hover { color: #8A8D93; border-color: #363B47; }
+
+    .results-body { display: grid; grid-template-columns: 320px 1fr; gap: 0; min-height: 540px; }
+
+    /* left panel */
+    .results-left {
+      background: #10131A; border-right: 1px solid #272B34;
+      padding: 28px 24px;
+      display: flex; flex-direction: column; gap: 24px;
+    }
+
+    /* gauge */
+    .gauge-wrap { text-align: center; }
+    .gauge-label { font-size: 0.72rem; color: #55585F; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 14px; }
+    .gauge-svg { display: block; margin: 0 auto; }
+    .gauge-score-text { font-size: 2.4rem; font-weight: 800; letter-spacing: -0.04em; fill: #E8E9EB; }
+    .gauge-sub-text { font-size: 0.68rem; fill: #55585F; }
+    .risk-label-badge {
+      display: inline-block;
+      margin-top: 12px;
+      padding: 5px 14px; border-radius: 100px;
+      font-size: 0.8rem; font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .risk-low   { background: rgba(74,222,128,0.12); color: #4ADE80; border: 1px solid rgba(74,222,128,0.28); }
+    .risk-medium{ background: rgba(251,191,36,0.12);  color: #FBBF24; border: 1px solid rgba(251,191,36,0.28); }
+    .risk-high  { background: rgba(248,113,113,0.12); color: #F87171; border: 1px solid rgba(248,113,113,0.28); }
+
+    /* flags */
+    .flags-title { font-size: 0.72rem; color: #55585F; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+    .flag-tags { display: flex; flex-direction: column; gap: 7px; }
+    .flag-tag {
+      display: flex; align-items: center; gap: 9px;
+      background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.18);
+      border-radius: 8px; padding: 9px 11px;
+      font-size: 0.8rem; color: #F87171; font-weight: 500;
+    }
+    .flag-tag svg { flex-shrink: 0; width: 13px; height: 13px; }
+
+    /* wallet meta */
+    .wallet-meta-title { font-size: 0.72rem; color: #55585F; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; }
+    .wallet-meta-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #1D2130; }
+    .wallet-meta-row:last-child { border-bottom: none; }
+    .wallet-meta-key { font-size: 0.78rem; color: #55585F; }
+    .wallet-meta-val { font-size: 0.78rem; color: #C8CACD; font-weight: 500; }
+
+    /* action buttons */
+    .action-btns { display: flex; flex-direction: column; gap: 9px; }
+    .action-btn {
+      display: flex; align-items: center; justify-content: center; gap: 8px;
+      border-radius: 9px; padding: 11px 16px;
+      font-weight: 600; font-size: 0.875rem;
+      transition: opacity 0.15s, background 0.15s;
+    }
+    .action-btn svg { width: 16px; height: 16px; }
+    .btn-assistant { background: #3A7ABE; color: #fff; }
+    .btn-assistant:hover { background: #4D90D4; }
+    .btn-report { background: #1A1D23; color: #8A8D93; border: 1px solid #272B34; }
+    .btn-report:hover { background: #20242C; color: #E8E9EB; }
+
+    /* RIGHT PANEL: graph */
+    .results-right { background: #0B0D11; padding: 24px; position: relative; overflow: hidden; }
+    .graph-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .graph-title { font-size: 0.72rem; color: #55585F; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; }
+    .graph-legend { display: flex; gap: 14px; }
+    .graph-legend-item { display: flex; align-items: center; gap: 6px; font-size: 0.7rem; color: #55585F; }
+    .legend-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+    #txGraph { width: 100%; height: 460px; display: block; }
+
+    .graph-tooltip {
+      position: absolute;
+      background: #1A1D23; border: 1px solid #272B34;
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 0.78rem; color: #E8E9EB;
+      pointer-events: none; opacity: 0;
+      transition: opacity 0.15s;
+      max-width: 240px; z-index: 50;
+    }
+    .graph-tooltip.visible { opacity: 1; }
+    .graph-tooltip-hash { font-family: 'Courier New', monospace; color: #8A8D93; font-size: 0.72rem; margin-top: 4px; }
+    .graph-tooltip-amount { color: #6AAAE0; font-weight: 700; margin-top: 4px; }
+
+    /* AI ASSISTANT PANEL */
+    .assistant-overlay {
+      position: fixed; inset: 0; z-index: 200;
+      display: flex; justify-content: flex-end;
+      pointer-events: none;
+    }
+    .assistant-overlay.open { pointer-events: all; }
+    .assistant-backdrop {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.35);
+      opacity: 0; transition: opacity 0.3s;
+    }
+    .assistant-overlay.open .assistant-backdrop { opacity: 1; }
+    .assistant-panel {
+      position: relative; z-index: 1;
+      width: 420px; background: var(--surface);
+      border-left: 3px solid var(--accent);
+      box-shadow: -8px 0 40px rgba(0,0,0,0.18);
+      display: flex; flex-direction: column;
+      transform: translateX(100%);
+      transition: transform 0.35s cubic-bezier(0.25, 0.8, 0.25, 1);
+    }
+    .assistant-overlay.open .assistant-panel { transform: translateX(0); }
+    .assistant-panel-header {
+      padding: 24px 24px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between;
+    }
+    .assistant-panel-title { font-weight: 700; font-size: 1rem; color: var(--text-primary); }
+    .assistant-panel-sub { font-size: 0.8rem; color: var(--text-secondary); margin-top: 2px; }
+    .assistant-close {
+      background: none; border: 1px solid var(--border);
+      border-radius: 6px; padding: 5px 8px; color: var(--text-secondary);
+      cursor: pointer; transition: color 0.15s, border-color 0.15s;
+      flex-shrink: 0;
+    }
+    .assistant-close:hover { color: var(--text-primary); border-color: var(--border-hover); }
+    .assistant-close svg { width: 16px; height: 16px; display: block; }
+
+    .assistant-messages {
+      flex: 1; overflow-y: auto;
+      padding: 20px 20px 10px;
+      display: flex; flex-direction: column; gap: 14px;
+    }
+    .chat-msg { display: flex; flex-direction: column; gap: 4px; }
+    .chat-msg.assistant { align-items: flex-start; }
+    .chat-msg.user { align-items: flex-end; }
+    .chat-bubble {
+      max-width: 88%; padding: 12px 16px;
+      border-radius: 12px; font-size: 0.875rem; line-height: 1.55;
+    }
+    .chat-msg.assistant .chat-bubble {
+      background: #1A1D23; color: var(--text-primary);
+      border: 1px solid #272B34;
+      border-radius: 4px 12px 12px 12px;
+    }
+    .chat-msg.user .chat-bubble {
+      background: var(--accent); color: #fff;
+      border-radius: 12px 4px 12px 12px;
+    }
+    .chat-sender { font-size: 0.72rem; color: var(--text-tertiary); padding: 0 4px; }
+
+    .typing-indicator { display: flex; align-items: center; gap: 5px; padding: 14px 16px; background: #1A1D23; border: 1px solid #272B34; border-radius: 4px 12px 12px 12px; width: fit-content; }
+    .typing-dot { width: 7px; height: 7px; background: #3A5878; border-radius: 50%; animation: typingBounce 1.1s ease-in-out infinite; }
+    .typing-dot:nth-child(2) { animation-delay: 0.18s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.36s; }
+    @keyframes typingBounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-5px); } }
+
+    .assistant-suggestions { padding: 12px 20px; border-top: 1px solid var(--border); }
+    .suggestions-label { font-size: 0.72rem; color: var(--text-tertiary); font-weight: 600; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.06em; }
+    .suggestion-chips { display: flex; flex-wrap: wrap; gap: 7px; }
+    .suggestion-chip {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--accent); border-radius: 100px;
+      padding: 6px 13px; font-size: 0.78rem; font-weight: 500;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s;
+    }
+    .suggestion-chip:hover { background: var(--accent-light); border-color: #1C3250; }
+
+    .assistant-input-row {
+      padding: 14px 20px;
+      border-top: 1px solid var(--border);
+      display: flex; gap: 10px;
+    }
+    .assistant-input {
+      flex: 1; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 10px 14px;
+      font-size: 0.875rem; color: var(--text-primary);
+      transition: border-color 0.2s;
+    }
+    .assistant-input:focus { outline: none; border-color: var(--accent); }
+    .assistant-send {
+      background: var(--accent); color: #fff;
+      border-radius: 8px; padding: 10px 16px;
+      font-size: 0.875rem; font-weight: 600;
+      transition: background 0.15s;
+      display: flex; align-items: center;
+    }
+    .assistant-send:hover { background: var(--accent-hover); }
+    .assistant-send svg { width: 16px; height: 16px; }
+
+    /* REPORT MODAL */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 300;
+      background: rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
+      opacity: 0; pointer-events: none;
+      transition: opacity 0.25s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal {
+      background: var(--surface); border-radius: var(--radius-lg);
+      max-width: 620px; width: 100%;
+      box-shadow: var(--shadow-elevated);
+      transform: scale(0.96) translateY(8px);
+      transition: transform 0.25s;
+      overflow: hidden;
+    }
+    .modal-overlay.open .modal { transform: scale(1) translateY(0); }
+    .modal-header {
+      padding: 28px 32px 0;
+      display: flex; align-items: flex-start; justify-content: space-between;
+    }
+    .modal-title { font-size: 1.1rem; font-weight: 700; color: var(--text-primary); }
+    .modal-subtitle { font-size: 0.82rem; color: var(--text-secondary); margin-top: 3px; }
+    .modal-close {
+      background: none; border: 1px solid var(--border); border-radius: 7px;
+      padding: 6px 9px; cursor: pointer; color: var(--text-secondary);
+      transition: color 0.15s;
+    }
+    .modal-close:hover { color: var(--text-primary); }
+    .modal-close svg { width: 16px; height: 16px; display: block; }
+
+    .modal-body { padding: 24px 32px; }
+    .report-doc {
+      background: var(--bg); border: 1px solid var(--border);
+      border-radius: 10px; padding: 28px;
+      font-size: 0.875rem; line-height: 1.7;
+    }
+    .report-doc-title {
+      font-size: 1rem; font-weight: 700; color: var(--text-primary);
+      border-bottom: 2px solid var(--accent); padding-bottom: 10px; margin-bottom: 18px;
+    }
+    .report-row { display: flex; margin-bottom: 10px; }
+    .report-key { color: var(--text-secondary); width: 170px; flex-shrink: 0; font-weight: 500; }
+    .report-val { color: var(--text-primary); font-weight: 600; }
+    .report-flags-list { margin: 6px 0 0 16px; }
+    .report-flags-list li { color: var(--risk-red); font-weight: 500; margin-bottom: 4px; }
+    .report-disclaimer {
+      margin-top: 18px; padding-top: 14px;
+      border-top: 1px solid var(--border);
+      font-size: 0.75rem; color: var(--text-tertiary); line-height: 1.6;
+    }
+
+    .modal-footer { padding: 0 32px 28px; display: flex; gap: 12px; justify-content: flex-end; }
+    .btn-download {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: var(--accent); color: #fff;
+      border-radius: 8px; padding: 10px 22px;
+      font-weight: 600; font-size: 0.875rem;
+      transition: background 0.15s;
+    }
+    .btn-download:hover { background: var(--accent-hover); }
+    .btn-download svg { width: 15px; height: 15px; }
+    .btn-modal-cancel {
+      background: var(--bg); border: 1px solid var(--border);
+      color: var(--text-secondary); border-radius: 8px;
+      padding: 10px 18px; font-size: 0.875rem; font-weight: 500;
+    }
+    .btn-modal-cancel:hover { color: var(--text-primary); }
+
+    /* FOOTER CTA */
+    .footer-cta {
+      padding: 80px 0;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
+    .footer-cta h2 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.025em; margin-bottom: 12px; }
+    .footer-cta p { color: var(--text-secondary); margin-bottom: 32px; }
+    .site-footer {
+      background: var(--bg); border-top: 1px solid var(--border);
+      padding: 24px 0; text-align: center;
+    }
+    .site-footer p { font-size: 0.8rem; color: var(--text-tertiary); }
+    .site-footer strong { font-weight: 600; color: var(--text-secondary); }
+
+    /* ANIMATIONS */
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .anim-fade { opacity: 0; animation: fadeInUp 0.4s ease forwards; }
+    .anim-delay-1 { animation-delay: 0.1s; }
+    .anim-delay-2 { animation-delay: 0.2s; }
+    .anim-delay-3 { animation-delay: 0.3s; }
+
+    /* FLOATING ACTION BUTTON */
+    .fab {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      z-index: 999;
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 2px 10px rgba(77,144,212,0.3), 0 1px 4px rgba(0,0,0,0.4);
+      transition: background 0.15s, transform 0.15s;
+    }
+    .fab:hover { background: var(--accent-hover); transform: scale(1.06); }
+    .fab:active { transform: scale(0.97); }
+    .fab svg { width: 24px; height: 24px; pointer-events: none; }
+    /* When the assistant panel is open the FAB shows an X */
+    .fab-close-icon { display: none; }
+    .fab-chat-icon  { display: block; }
+    .assistant-overlay.open ~ .fab .fab-chat-icon  { display: none; }
+    .assistant-overlay.open ~ .fab .fab-close-icon { display: block; }
+  </style>
+</head>
+<body>
+
+<!-- TOP NAV -->
+<nav class="topnav" role="navigation" aria-label="Main navigation">
+  <div class="topnav-inner">
+    <div class="topnav-logo">
+      <div class="topnav-logo-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/><path d="M11 8v6M8 11h6"/>
+        </svg>
+      </div>
+      FlowTrace
+    </div>
+    <button class="topnav-cta" onclick="scrollToTool()" id="nav-launch-btn">Launch demo</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero" id="hero" aria-labelledby="hero-headline">
+  <div class="hero-inner">
+    <div class="hero-badge">
+      <span class="hero-badge-dot"></span>
+      Hackathon 2026 &mdash; Track 5 &middot; Cybercrime &amp; Digital Forensics
+    </div>
+    <h1 id="hero-headline">Wallet risk intelligence<br>for <span>Indian law enforcement</span></h1>
+    <p class="hero-sub">FlowTrace helps investigators quickly assess wallet risk, trace transaction flows, and generate case-ready reports &mdash; no blockchain expertise required.</p>
+    <div class="hero-actions">
+      <button class="btn-primary" onclick="scrollToTool()" id="hero-launch-btn">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+        Launch demo
+      </button>
+      <span class="hero-microcopy">No blockchain expertise required</span>
+    </div>
+  </div>
+</section>
+
+
+<!-- STAT ROW -->
+<section class="stat-row" aria-label="Demo statistics">
+  <div class="stat-row-inner">
+    <div class="stat-item">
+      <div class="stat-number">5</div>
+      <div class="stat-label">Wallets in demo dataset</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">3</div>
+      <div class="stat-label">Risk factors tracked per wallet</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-number">0</div>
+      <div class="stat-label">Blockchain expertise required to use it</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how-it-works section" aria-labelledby="how-title">
+  <div class="container">
+    <p class="section-label">How it works</p>
+    <h2 class="section-title" id="how-title">From wallet address to investigation report in seconds</h2>
+    <div class="how-grid">
+      <div class="how-card">
+        <div class="how-step">01</div>
+        <div class="how-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+        </div>
+        <h3 class="how-title">Search</h3>
+        <p class="how-desc">Enter any wallet address &mdash; no technical background needed to get started.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-step">02</div>
+        <div class="how-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 19v-6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2zm0 0V9a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v10m-6 0a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2m0 0V5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2z"/>
+          </svg>
+        </div>
+        <h3 class="how-title">Analyze</h3>
+        <p class="how-desc">Get a risk score, flagged patterns, and a visual transaction graph in seconds.</p>
+      </div>
+      <div class="how-card">
+        <div class="how-step">03</div>
+        <div class="how-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+        </div>
+        <h3 class="how-title">Explain</h3>
+        <p class="how-desc">Ask the AI assistant to break down findings in plain English &mdash; no jargon.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURE GRID -->
+<section class="features section" aria-labelledby="features-title">
+  <div class="container">
+    <p class="section-label">Capabilities</p>
+    <h2 class="section-title" id="features-title">Everything an investigator needs</h2>
+    <div class="feature-grid">
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
+          </svg>
+        </div>
+        <h3 class="feature-title">Wallet Risk Scoring</h3>
+        <p class="feature-desc">0&ndash;100 gauge with color-coded severity: green, amber, or red at a glance.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+            <path d="m8.59 13.51 6.83 3.98M15.41 6.51l-6.82 3.98"/>
+          </svg>
+        </div>
+        <h3 class="feature-title">Transaction Flow Graph</h3>
+        <p class="feature-desc">Visualize fund movement across linked wallets in an interactive node graph.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+          </svg>
+        </div>
+        <h3 class="feature-title">One-Click Investigation Report</h3>
+        <p class="feature-desc">Generate a shareable, structured case summary ready for internal review.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            <path d="M8 10h8M8 14h4"/>
+          </svg>
+        </div>
+        <h3 class="feature-title">AI Plain-English Explanations</h3>
+        <p class="feature-desc">Ask questions about any finding and get investigator-friendly answers instantly.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TOOL SECTION -->
+<section class="tool-section" id="tool-section" aria-labelledby="tool-section-title">
+  <div class="container">
+    <p class="section-label">Interactive Demo</p>
+    <h2 class="section-title" id="tool-section-title">Try FlowTrace now</h2>
+    <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:32px;">Click any example wallet address below to see the full analysis.</p>
+
+    <div class="tool-container" id="tool-container">
+      <!-- window chrome -->
+      <div class="tool-chrome">
+        <div class="chrome-dots">
+          <div class="chrome-dot red"></div>
+          <div class="chrome-dot yellow"></div>
+          <div class="chrome-dot green"></div>
+        </div>
+        <div class="chrome-title">FlowTrace &mdash; Wallet Intelligence Dashboard</div>
+        <div class="chrome-badge">Demo Mode</div>
+      </div>
+
+      <div class="tool-inner">
+        <!-- SEARCH SCREEN -->
+        <div id="screen-search" class="screen active" role="region" aria-label="Wallet search">
+          <div class="tool-header">
+            <div class="tool-logo">
+              <div class="tool-logo-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/><path d="M11 8v6M8 11h6"/>
+                </svg>
+              </div>
+              FlowTrace
+            </div>
+            <p class="tool-tagline">Wallet risk &amp; transaction intelligence for investigators</p>
+          </div>
+
+          <div class="search-box">
+            <div class="search-input-row">
+              <input type="text" class="search-input" id="wallet-input"
+                placeholder="Enter wallet address (e.g. 0x7fC2a9B4...)"
+                aria-label="Wallet address input"
+                onkeydown="if(event.key==='Enter')analyzeWallet()" />
+              <button class="search-btn" onclick="analyzeWallet()" id="analyze-btn" aria-label="Analyze wallet">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/>
+                </svg>
+                Analyze
+              </button>
+            </div>
+          </div>
+
+          <p class="example-label">Example wallet addresses &mdash; click to analyze:</p>
+          <div class="example-chips" id="example-chips" role="list" aria-label="Example wallets">
+            <div class="example-chip" role="listitem" tabindex="0" onclick="selectChip(this)" data-wallet="0x7fC2a9B4d8E1c6A3f0D5b7E9a1C4d6F8b2E0a3C7">0x7fC2a9B4d8E1c6A3f0D5b7E9a1C4d6F8b2E0a3C7</div>
+            <div class="example-chip" role="listitem" tabindex="0" onclick="selectChip(this)" data-wallet="0xC4e7A1d9F2b6c8E0a5D3f7B1c9A4e6D8b0F2a7C1">0xC4e7A1d9F2b6c8E0a5D3f7B1c9A4e6D8b0F2a7C1</div>
+            <div class="example-chip" role="listitem" tabindex="0" onclick="selectChip(this)" data-wallet="0x9aD3f6C1b8E4a0F7d2C5b9E1a6D8c3F0b4A7e2D5">0x9aD3f6C1b8E4a0F7d2C5b9E1a6D8c3F0b4A7e2D5</div>
+            <div class="example-chip" role="listitem" tabindex="0" onclick="selectChip(this)" data-wallet="0xE1b5C9a2F7d3A8c0B6e4D1f9A3c7E2b5D8f0a6C4">0xE1b5C9a2F7d3A8c0B6e4D1f9A3c7E2b5D8f0a6C4</div>
+            <div class="example-chip" role="listitem" tabindex="0" onclick="selectChip(this)" data-wallet="0xA6d0F3b8C1e7D4a9F2c5B0e6D8a1C7f4B9d3E0a2">0xA6d0F3b8C1e7D4a9F2c5B0e6D8a1C7f4B9d3E0a2</div>
+          </div>
+
+          <div class="search-info-row">
+            <div class="search-info-card">
+              <div class="search-info-card-title">Demo Dataset</div>
+              <div class="search-info-card-val">5</div>
+              <div class="search-info-card-sub">Pre-loaded wallet profiles</div>
+            </div>
+            <div class="search-info-card">
+              <div class="search-info-card-title">Risk Scoring</div>
+              <div class="search-info-card-val">0&ndash;100</div>
+              <div class="search-info-card-sub">Color-coded severity gauge</div>
+            </div>
+            <div class="search-info-card">
+              <div class="search-info-card-title">AI Assistant</div>
+              <div class="search-info-card-val">Live</div>
+              <div class="search-info-card-sub">Plain-English explanations</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- RESULTS SCREEN -->
+        <div id="screen-results" class="screen" role="region" aria-label="Wallet analysis results">
+          <div class="results-header">
+            <div class="results-back" onclick="goBack()" role="button" tabindex="0" aria-label="Back to search" onkeydown="if(event.key==='Enter')goBack()">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="m15 18-6-6 6-6"/>
+              </svg>
+              New search
+            </div>
+            <div class="results-wallet-id">
+              <span id="result-wallet-display">0x7fC2&hellip;a3C7</span>
+              <button class="copy-btn" onclick="copyWallet()" id="copy-btn" aria-label="Copy wallet address">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                Copy
+              </button>
+            </div>
+            <div style="width:90px"></div>
+          </div>
+
+          <div class="results-body">
+            <!-- LEFT PANEL -->
+            <div class="results-left">
+              <div class="gauge-wrap anim-fade" id="gauge-wrap">
+                <div class="gauge-label">Risk Score</div>
+                <svg class="gauge-svg" id="riskGauge" width="180" height="120" viewBox="0 0 180 120" aria-label="Risk score gauge">
+                  <path d="M20,100 A80,80 0 0,1 160,100" fill="none" stroke="#2A2D35" stroke-width="12" stroke-linecap="round"/>
+                  <path id="gaugeArc" d="M20,100 A80,80 0 0,1 160,100" fill="none" stroke="#F87171" stroke-width="12" stroke-linecap="round"
+                        stroke-dasharray="0 1000" style="transition: stroke-dasharray 1s cubic-bezier(0.25,0.8,0.25,1), stroke 0.4s;"/>
+                  <text x="90" y="88" text-anchor="middle" class="gauge-score-text" id="gaugeScoreText">85</text>
+                  <text x="90" y="106" text-anchor="middle" class="gauge-sub-text">out of 100</text>
+                </svg>
+                <div id="riskLabel" class="risk-label-badge risk-high">High Risk</div>
+              </div>
+
+              <div class="anim-fade anim-delay-1" id="flags-wrap">
+                <div class="flags-title">Flagged Reasons</div>
+                <div class="flag-tags" id="flag-tags"></div>
+              </div>
+
+              <div class="anim-fade anim-delay-2" id="wallet-meta">
+                <div class="wallet-meta-title">Wallet Details</div>
+                <div id="wallet-meta-rows"></div>
+              </div>
+
+              <div class="action-btns anim-fade anim-delay-3">
+                <button class="action-btn btn-report" id="open-report-btn" onclick="openReport()" aria-label="Generate investigation report">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                  </svg>
+                  Generate Investigation Report
+                </button>
+              </div>
+            </div>
+
+            <!-- RIGHT PANEL: graph -->
+            <div class="results-right">
+              <div class="graph-header">
+                <div class="graph-title">Transaction Flow Graph</div>
+                <div class="graph-legend">
+                  <div class="graph-legend-item"><div class="legend-dot" style="background:#4B9EFF"></div> Searched wallet</div>
+                  <div class="graph-legend-item"><div class="legend-dot" style="background:#4B5563"></div> Connected wallet</div>
+                  <div class="graph-legend-item"><div class="legend-dot" style="background:#F87171"></div> Flagged wallet</div>
+                </div>
+              </div>
+              <canvas id="txGraph" aria-label="Transaction flow graph"></canvas>
+              <div class="graph-tooltip" id="graphTooltip"></div>
+            </div>
+          </div>
+        </div>
+      </div><!-- /tool-inner -->
+    </div><!-- /tool-container -->
+  </div>
+</section>
+
+<!-- FOOTER CTA -->
+<section class="footer-cta" aria-labelledby="footer-cta-title">
+  <div class="container">
+    <h2 id="footer-cta-title">See how FlowTrace can support your investigations</h2>
+    <p>Step-by-step, wallet by wallet &mdash; no technical background required.</p>
+    <button class="btn-primary" onclick="scrollToTool()" id="footer-launch-btn">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      Launch demo
+    </button>
+  </div>
+</section>
+
+<!-- SITE FOOTER -->
+<footer class="site-footer" role="contentinfo">
+  <p><strong>FlowTrace</strong> &middot; Chandigarh Police Hackathon 2026, Track 5 &mdash; Cybercrime &amp; Digital Forensics &middot; PEC Chandigarh &middot; Prototype demo, not a production system</p>
+</footer>
+
+<!-- AI ASSISTANT PANEL -->
+<div class="assistant-overlay" id="assistantOverlay" role="dialog" aria-modal="true" aria-label="FlowTrace AI Assistant">
+  <div class="assistant-backdrop" onclick="closeAssistant()"></div>
+  <div class="assistant-panel" id="assistantPanel">
+    <div class="assistant-panel-header">
+      <div>
+        <div class="assistant-panel-title">FlowTrace Assistant</div>
+        <div class="assistant-panel-sub" id="assistantPanelSub">Ask about this wallet in plain English</div>
+      </div>
+      <button class="assistant-close" onclick="closeAssistant()" aria-label="Close assistant">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="assistant-messages" id="chatMessages" role="log" aria-live="polite"></div>
+
+    <div class="assistant-suggestions" id="suggestionsArea">
+      <div class="suggestions-label">Try asking</div>
+      <div class="suggestion-chips" id="suggestionChips"></div>
+    </div>
+
+    <div class="assistant-input-row">
+      <input type="text" class="assistant-input" id="chatInput" placeholder="Ask a question&hellip;" aria-label="Chat message input"
+        onkeydown="if(event.key==='Enter')sendChat()" />
+      <button class="assistant-send" onclick="sendChat()" aria-label="Send message">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m22 2-7 20-4-9-9-4 20-7z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- FLOATING ACTION BUTTON -->
+<button class="fab" id="fabBtn" onclick="toggleAssistant()" aria-label="Toggle AI assistant">
+  <!-- chat icon -->
+  <svg class="fab-chat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+  </svg>
+  <!-- close icon -->
+  <svg class="fab-close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 6 6 18M6 6l12 12"/>
+  </svg>
+</button>
+
+<!-- REPORT MODAL -->
+<div class="modal-overlay" id="reportModal" role="dialog" aria-modal="true" aria-label="Investigation Report">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Investigation Report</div>
+        <div class="modal-subtitle">Generated by FlowTrace &mdash; for internal investigative use only</div>
+      </div>
+      <button class="modal-close" onclick="closeReport()" aria-label="Close report">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M18 6 6 18M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="report-doc">
+        <div class="report-doc-title">FlowTrace Wallet Risk Report</div>
+        <div class="report-row">
+          <span class="report-key">Wallet Address</span>
+          <span class="report-val" id="rpt-wallet" style="font-family:'Courier New',monospace;font-size:0.78rem;word-break:break-all;">&mdash;</span>
+        </div>
+        <div class="report-row">
+          <span class="report-key">Risk Score</span>
+          <span class="report-val" id="rpt-score">&mdash;</span>
+        </div>
+        <div class="report-row">
+          <span class="report-key">Risk Level</span>
+          <span class="report-val" id="rpt-level">&mdash;</span>
+        </div>
+        <div class="report-row">
+          <span class="report-key">Flagged Reasons</span>
+          <span class="report-val">
+            <ul class="report-flags-list" id="rpt-flags"></ul>
+          </span>
+        </div>
+        <div class="report-row">
+          <span class="report-key">Report Generated</span>
+          <span class="report-val" id="rpt-timestamp">&mdash;</span>
+        </div>
+        <div class="report-row">
+          <span class="report-key">Generated By</span>
+          <span class="report-val">FlowTrace Demo &middot; Chandigarh Police Hackathon 2026</span>
+        </div>
+        <div class="report-disclaimer">
+          &#9888; Risk scores are investigative leads, not legal proof. Identifying a real person behind a wallet requires exchange KYC data obtained through legal process. This report is for internal investigative use only.
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-modal-cancel" onclick="closeReport()">Close</button>
+      <button class="btn-download" onclick="showDownloadNotice()" aria-label="Download PDF report">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        Download PDF
+      </button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==========================================
+// MOCK DATA
+// ==========================================
+const WALLETS = {
+  '0x7fC2a9B4d8E1c6A3f0D5b7E9a1C4d6F8b2E0a3C7': {
+    score: 85, flags: ['High-frequency small transfers', 'Linked to unverified exchange'],
+    txCount: 214, volume: '3.42 ETH', firstSeen: '2024-03-11', lastSeen: '2025-07-28', chain: 'Ethereum'
+  },
+  '0xC4e7A1d9F2b6c8E0a5D3f7B1c9A4e6D8b0F2a7C1': {
+    score: 70, flags: ['Linked to flagged address', 'Multiple small deposits from various sources'],
+    txCount: 87, volume: '1.18 ETH', firstSeen: '2024-09-02', lastSeen: '2025-08-01', chain: 'Ethereum'
+  },
+  '0x9aD3f6C1b8E4a0F7d2C5b9E1a6D8c3F0b4A7e2D5': {
+    score: 92, flags: ['Mixer use detected', 'Sudden large transfer exceeding typical volume'],
+    txCount: 341, volume: '18.77 ETH', firstSeen: '2023-11-19', lastSeen: '2025-07-30', chain: 'Ethereum'
+  },
+  '0xE1b5C9a2F7d3A8c0B6e4D1f9A3c7E2b5D8f0a6C4': {
+    score: 60, flags: ['Circular transactions', 'Inconsistent transaction patterns'],
+    txCount: 53, volume: '0.84 ETH', firstSeen: '2024-12-05', lastSeen: '2025-07-15', chain: 'Ethereum'
+  },
+  '0xA6d0F3b8C1e7D4a9F2c5B0e6D8a1C7f4B9d3E0a2': {
+    score: 45, flags: ['Low activity', 'No suspicious patterns detected'],
+    txCount: 12, volume: '0.21 ETH', firstSeen: '2025-01-14', lastSeen: '2025-06-20', chain: 'Ethereum'
+  }
+};
+
+const WALLET_LOOKUP = {};
+Object.keys(WALLETS).forEach(k => { WALLET_LOOKUP[k.toLowerCase()] = k; });
+
+const GRAPH_DATA = {
+  '0x7fC2a9B4d8E1c6A3f0D5b7E9a1C4d6F8b2E0a3C7': {
+    nodes: [
+      { id: 'center', label: '0x7fC2\u2026a3C7', type: 'center' },
+      { id: 'n1', label: '0xD3a1\u2026b7F2', type: 'flagged' },
+      { id: 'n2', label: '0xBnc\u2026ce01', type: 'normal' },
+      { id: 'n3', label: '0xF9c4\u2026a1E8', type: 'flagged' },
+      { id: 'n4', label: '0x2A5f\u2026d0C3', type: 'normal' },
+      { id: 'n5', label: '0x8Eb7\u20263fA9', type: 'normal' },
+    ],
+    edges: [
+      { from: 'center', to: 'n1', amount: '0.82 ETH', hash: '0xabc\u20261f2d', dir: 'out' },
+      { from: 'center', to: 'n2', amount: '1.04 ETH', hash: '0xdef\u20264a8c', dir: 'out' },
+      { from: 'n3', to: 'center', amount: '0.54 ETH', hash: '0x9f1\u2026c2e3', dir: 'in' },
+      { from: 'center', to: 'n4', amount: '0.21 ETH', hash: '0x3d4\u20267b1a', dir: 'out' },
+      { from: 'n5', to: 'center', amount: '0.81 ETH', hash: '0x7c2\u20269a4f', dir: 'in' },
+    ]
+  },
+  '0xC4e7A1d9F2b6c8E0a5D3f7B1c9A4e6D8b0F2a7C1': {
+    nodes: [
+      { id: 'center', label: '0xC4e7\u2026a7C1', type: 'center' },
+      { id: 'n1', label: '0xFlg\u20263e2a', type: 'flagged' },
+      { id: 'n2', label: '0x4A1f\u2026c9D0', type: 'normal' },
+      { id: 'n3', label: '0x7Bc3\u2026e5F1', type: 'normal' },
+      { id: 'n4', label: '0xE9d2\u20260aB6', type: 'normal' },
+    ],
+    edges: [
+      { from: 'n1', to: 'center', amount: '0.32 ETH', hash: '0x11a\u20269c3d', dir: 'in' },
+      { from: 'n2', to: 'center', amount: '0.18 ETH', hash: '0x22b\u20261e4f', dir: 'in' },
+      { from: 'center', to: 'n3', amount: '0.44 ETH', hash: '0x33c\u20262f5a', dir: 'out' },
+      { from: 'n4', to: 'center', amount: '0.24 ETH', hash: '0x44d\u20263a6b', dir: 'in' },
+    ]
+  },
+  '0x9aD3f6C1b8E4a0F7d2C5b9E1a6D8c3F0b4A7e2D5': {
+    nodes: [
+      { id: 'center', label: '0x9aD3\u2026e2D5', type: 'center' },
+      { id: 'n1', label: '0xMix\u20264f1a', type: 'flagged' },
+      { id: 'n2', label: '0xMix\u20267c2b', type: 'flagged' },
+      { id: 'n3', label: '0x1Fc5\u2026d3A9', type: 'normal' },
+      { id: 'n4', label: '0x6Bd8\u2026e0F4', type: 'flagged' },
+      { id: 'n5', label: '0x0Ca2\u2026b8E6', type: 'normal' },
+    ],
+    edges: [
+      { from: 'n1', to: 'center', amount: '7.40 ETH', hash: '0x55e\u20264b7c', dir: 'in' },
+      { from: 'n2', to: 'center', amount: '8.92 ETH', hash: '0x66f\u20265c8d', dir: 'in' },
+      { from: 'center', to: 'n3', amount: '3.10 ETH', hash: '0x77a\u20266d9e', dir: 'out' },
+      { from: 'center', to: 'n4', amount: '9.15 ETH', hash: '0x88b\u20267e0f', dir: 'out' },
+      { from: 'n5', to: 'center', amount: '2.45 ETH', hash: '0x99c\u20268f1a', dir: 'in' },
+    ]
+  },
+  '0xE1b5C9a2F7d3A8c0B6e4D1f9A3c7E2b5D8f0a6C4': {
+    nodes: [
+      { id: 'center', label: '0xE1b5\u2026a6C4', type: 'center' },
+      { id: 'n1', label: '0x3Df0\u2026c1B7', type: 'normal' },
+      { id: 'n2', label: '0x8Ac4\u2026f2D3', type: 'normal' },
+      { id: 'n3', label: '0x5Ce7\u2026a3E1', type: 'normal' },
+      { id: 'n4', label: '0xB2a9\u2026d4F5', type: 'normal' },
+    ],
+    edges: [
+      { from: 'center', to: 'n1', amount: '0.22 ETH', hash: '0xaad\u20269a2b', dir: 'out' },
+      { from: 'n1', to: 'n2', amount: '0.20 ETH', hash: '0xbbe\u20260b3c', dir: 'out' },
+      { from: 'n2', to: 'center', amount: '0.18 ETH', hash: '0xcce\u20261c4d', dir: 'in' },
+      { from: 'center', to: 'n3', amount: '0.12 ETH', hash: '0xddf\u20262d5e', dir: 'out' },
+      { from: 'n3', to: 'n4', amount: '0.10 ETH', hash: '0xeef\u20263e6f', dir: 'out' },
+    ]
+  },
+  '0xA6d0F3b8C1e7D4a9F2c5B0e6D8a1C7f4B9d3E0a2': {
+    nodes: [
+      { id: 'center', label: '0xA6d0\u2026E0a2', type: 'center' },
+      { id: 'n1', label: '0xCbase\u20269f3', type: 'normal' },
+      { id: 'n2', label: '0x7Be1\u2026c4A2', type: 'normal' },
+      { id: 'n3', label: '0xD5f8\u2026b0C6', type: 'normal' },
+    ],
+    edges: [
+      { from: 'n1', to: 'center', amount: '0.12 ETH', hash: '0x001\u2026f1a2', dir: 'in' },
+      { from: 'center', to: 'n2', amount: '0.05 ETH', hash: '0x002\u2026f2b3', dir: 'out' },
+      { from: 'n3', to: 'center', amount: '0.04 ETH', hash: '0x003\u2026f3c4', dir: 'in' },
+    ]
+  }
+};
+
+// ==========================================
+// STATE
+// ==========================================
+let currentWallet = null;
+let animationFrameId = null;
+let graphNodes = [];
+let graphEdges = [];
+let hoveredNode = null;
+
+// ==========================================
+// NAVIGATION
+// ==========================================
+function scrollToTool() {
+  document.getElementById('tool-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+function selectChip(el) {
+  document.getElementById('wallet-input').value = el.dataset.wallet;
+  analyzeWallet();
+}
+
+function goBack() {
+  showScreen('search');
+  currentWallet = null;
+  document.getElementById('wallet-input').value = '';
+  closeAssistant();
+  closeReport();
+  if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + name).classList.add('active');
+}
+
+// ==========================================
+// ANALYZE
+// ==========================================
+function analyzeWallet() {
+  const raw = document.getElementById('wallet-input').value.trim();
+  if (!raw) return;
+  const key = WALLET_LOOKUP[raw.toLowerCase()];
+  if (!key) {
+    alert('Wallet not found in demo dataset. Try one of the example addresses below.');
+    return;
+  }
+  currentWallet = key;
+  const data = WALLETS[key];
+  const trunc = key.slice(0, 10) + '\u2026' + key.slice(-4);
+  document.getElementById('result-wallet-display').textContent = trunc;
+
+  updateGauge(data.score);
+
+  const { cls, label } = riskMeta(data.score);
+  const riskLabelEl = document.getElementById('riskLabel');
+  riskLabelEl.className = 'risk-label-badge ' + cls;
+  riskLabelEl.textContent = label;
+
+  document.getElementById('flag-tags').innerHTML = data.flags.map(f => `
+    <div class="flag-tag">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      ${f}
+    </div>
+  `).join('');
+
+  document.getElementById('wallet-meta-rows').innerHTML = `
+    <div class="wallet-meta-row"><span class="wallet-meta-key">Chain</span><span class="wallet-meta-val">${data.chain}</span></div>
+    <div class="wallet-meta-row"><span class="wallet-meta-key">Transactions</span><span class="wallet-meta-val">${data.txCount}</span></div>
+    <div class="wallet-meta-row"><span class="wallet-meta-key">Volume</span><span class="wallet-meta-val">${data.volume}</span></div>
+    <div class="wallet-meta-row"><span class="wallet-meta-key">First seen</span><span class="wallet-meta-val">${data.firstSeen}</span></div>
+    <div class="wallet-meta-row"><span class="wallet-meta-key">Last seen</span><span class="wallet-meta-val">${data.lastSeen}</span></div>
+  `;
+
+  showScreen('results');
+
+  document.querySelectorAll('.anim-fade').forEach(el => {
+    el.style.animation = 'none';
+    void el.offsetHeight;
+    el.style.animation = '';
+  });
+
+  setTimeout(() => drawGraph(key), 150);
+  resetChat();
+}
+
+// ==========================================
+// GAUGE
+// ==========================================
+function riskMeta(score) {
+  if (score >= 75) return { cls: 'risk-high', label: 'High Risk', color: '#F87171' };
+  if (score >= 50) return { cls: 'risk-medium', label: 'Moderate Risk', color: '#FCD34D' };
+  return { cls: 'risk-low', label: 'Low Risk', color: '#34D399' };
+}
+
+function updateGauge(score) {
+  const arcLen = (score / 100) * 251.2;
+  document.getElementById('gaugeScoreText').textContent = score;
+  const arc = document.getElementById('gaugeArc');
+  const { color } = riskMeta(score);
+  arc.style.stroke = color;
+  arc.style.strokeDasharray = '0 1000';
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      arc.style.strokeDasharray = arcLen + ' 1000';
+    });
+  });
+}
+
+// ==========================================
+// TRANSACTION GRAPH
+// ==========================================
+function drawGraph(walletKey) {
+  const canvas = document.getElementById('txGraph');
+  const tooltip = document.getElementById('graphTooltip');
+  if (!canvas) return;
+  if (animationFrameId) { cancelAnimationFrame(animationFrameId); animationFrameId = null; }
+
+  const ctx = canvas.getContext('2d');
+  const W = canvas.offsetWidth;
+  const H = canvas.offsetHeight;
+  canvas.width = W * window.devicePixelRatio;
+  canvas.height = H * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+  const gData = GRAPH_DATA[walletKey];
+  if (!gData) return;
+
+  const cx = W / 2, cy = H / 2;
+  const radius = Math.min(W, H) * 0.33;
+  const nodeMap = {};
+  const peripheral = gData.nodes.filter(n => n.type !== 'center');
+
+  gData.nodes.forEach(n => {
+    if (n.type === 'center') {
+      nodeMap[n.id] = { ...n, x: cx, y: cy };
+    }
+  });
+  peripheral.forEach((n, i) => {
+    const angle = (i / peripheral.length) * Math.PI * 2 - Math.PI / 2;
+    nodeMap[n.id] = { ...n, x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle) };
+  });
+
+  graphNodes = Object.values(nodeMap);
+  graphEdges = gData.edges.map(e => ({ ...e, fromNode: nodeMap[e.from], toNode: nodeMap[e.to] }));
+  hoveredNode = null;
+
+  canvas.onmousemove = (evt) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = evt.clientX - rect.left;
+    const my = evt.clientY - rect.top;
+    let found = null;
+    for (const n of graphNodes) {
+      const r = n.type === 'center' ? 22 : 15;
+      if (Math.hypot(mx - n.x, my - n.y) < r) { found = n; break; }
+    }
+    hoveredNode = found;
+    if (found) {
+      const edge = graphEdges.find(e => e.fromNode === found || e.toNode === found);
+      tooltip.innerHTML = `
+        <div style="font-weight:600;color:#F1F1EF;">${found.label}</div>
+        ${edge ? `<div class="graph-tooltip-hash">Tx: ${edge.hash}</div><div class="graph-tooltip-amount">${edge.amount}</div>` : ''}
+        <div style="margin-top:4px;font-size:0.7rem;color:${found.type==='flagged'?'#F87171':found.type==='center'?'#4B9EFF':'#9CA3AF'};">${found.type==='flagged'?'\u26a0 Flagged':found.type==='center'?'\uD83D\uDD0D Searched wallet':'Connected wallet'}</div>
+      `;
+      tooltip.style.left = (mx + 14) + 'px';
+      tooltip.style.top = (my - 20) + 'px';
+      tooltip.classList.add('visible');
+    } else {
+      tooltip.classList.remove('visible');
+    }
+  };
+  canvas.onmouseleave = () => { hoveredNode = null; tooltip.classList.remove('visible'); };
+
+  let t = 0;
+  function render() {
+    t += 0.012;
+    ctx.clearRect(0, 0, W, H);
+
+    // Background grid dots
+    ctx.fillStyle = 'rgba(255,255,255,0.02)';
+    for (let x = 20; x < W; x += 40) {
+      for (let y = 20; y < H; y += 40) {
+        ctx.beginPath(); ctx.arc(x, y, 1, 0, Math.PI*2); ctx.fill();
+      }
+    }
+
+    // Edges
+    graphEdges.forEach(edge => {
+      if (!edge.fromNode || !edge.toNode) return;
+      const { fromNode, toNode, amount } = edge;
+      const pulse = (Math.sin(t * 2) + 1) / 2;
+      const alpha = 0.3 + pulse * 0.2;
+
+      ctx.beginPath();
+      ctx.moveTo(fromNode.x, fromNode.y);
+      ctx.lineTo(toNode.x, toNode.y);
+      ctx.strokeStyle = `rgba(75, 158, 255, ${alpha})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Arrow head
+      const angle = Math.atan2(toNode.y - fromNode.y, toNode.x - fromNode.x);
+      const destR = toNode.type === 'center' ? 24 : 17;
+      const headX = toNode.x - destR * Math.cos(angle);
+      const headY = toNode.y - destR * Math.sin(angle);
+      ctx.beginPath();
+      ctx.moveTo(headX, headY);
+      ctx.lineTo(headX - 9 * Math.cos(angle - 0.42), headY - 9 * Math.sin(angle - 0.42));
+      ctx.lineTo(headX - 9 * Math.cos(angle + 0.42), headY - 9 * Math.sin(angle + 0.42));
+      ctx.closePath();
+      ctx.fillStyle = `rgba(75, 158, 255, ${alpha + 0.25})`;
+      ctx.fill();
+
+      // Animated flow dot
+      const flowT = (t * 0.5) % 1;
+      const fx = fromNode.x + (toNode.x - fromNode.x) * flowT;
+      const fy = fromNode.y + (toNode.y - fromNode.y) * flowT;
+      ctx.beginPath();
+      ctx.arc(fx, fy, 3, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(147, 210, 255, ${0.6 + pulse * 0.3})`;
+      ctx.fill();
+
+      // Amount label
+      const midX = (fromNode.x + toNode.x) / 2;
+      const midY = (fromNode.y + toNode.y) / 2;
+      ctx.save();
+      ctx.fillStyle = 'rgba(75, 158, 255, 0.85)';
+      ctx.font = '600 11px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      ctx.fillText(amount, midX, midY - 4);
+      ctx.restore();
+    });
+
+    // Nodes
+    graphNodes.forEach(n => {
+      if (!n) return;
+      const isHovered = hoveredNode === n;
+      const r = n.type === 'center' ? 22 : 15;
+      const dr = isHovered ? r + 4 : r;
+      let fill, stroke, glowColor;
+      if (n.type === 'center') {
+        fill = '#1A5FA8'; stroke = isHovered ? '#93C5FD' : '#4B9EFF'; glowColor = 'rgba(75,158,255,0.3)';
+      } else if (n.type === 'flagged') {
+        fill = '#2D1A1A'; stroke = isHovered ? '#FCA5A5' : '#F87171'; glowColor = 'rgba(248,113,113,0.25)';
+      } else {
+        fill = '#1A2030'; stroke = isHovered ? '#9CA3AF' : '#374151'; glowColor = 'rgba(255,255,255,0.08)';
+      }
+
+      if (isHovered) {
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, dr + 10, 0, Math.PI * 2);
+        const gradient = ctx.createRadialGradient(n.x, n.y, dr, n.x, n.y, dr + 10);
+        gradient.addColorStop(0, glowColor);
+        gradient.addColorStop(1, 'transparent');
+        ctx.fillStyle = gradient;
+        ctx.fill();
+      }
+
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, dr, 0, Math.PI * 2);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = isHovered ? 2.5 : 1.5;
+      ctx.stroke();
+
+      // Node icon
+      ctx.save();
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      if (n.type === 'center') {
+        ctx.fillStyle = '#DBEAFE';
+        ctx.font = 'bold 12px Inter, sans-serif';
+        ctx.fillText('\uD83D\uDD0D', n.x, n.y);
+      } else if (n.type === 'flagged') {
+        ctx.fillStyle = '#F87171';
+        ctx.font = '13px Inter, sans-serif';
+        ctx.fillText('\u26A0', n.x, n.y);
+      } else {
+        ctx.fillStyle = '#6B7280';
+        ctx.font = '11px Inter, sans-serif';
+        ctx.fillText('\u25CB', n.x, n.y);
+      }
+      ctx.restore();
+
+      // Label
+      ctx.save();
+      ctx.fillStyle = n.type === 'center' ? '#93C5FD' : n.type === 'flagged' ? '#FCA5A5' : '#6B7280';
+      ctx.font = '9px "Courier New", monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillText(n.label, n.x, n.y + dr + 5);
+      ctx.restore();
+    });
+
+    animationFrameId = requestAnimationFrame(render);
+  }
+  render();
+}
+
+// ==========================================
+// COPY WALLET
+// ==========================================
+function copyWallet() {
+  if (!currentWallet) return;
+  navigator.clipboard.writeText(currentWallet).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.innerHTML = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg> Copy'; }, 1500);
+  }).catch(() => {});
+}
+
+// ==========================================
+// AI ASSISTANT — CONFIGURATION
+// ==========================================
+const USE_REAL_AI = true; // set false to always use keyword fallback
+
+// ==========================================
+// AI ASSISTANT — PANEL OPEN/CLOSE
+// ==========================================
+function toggleAssistant() {
+  const overlay = document.getElementById('assistantOverlay');
+  if (overlay.classList.contains('open')) {
+    closeAssistant();
+  } else {
+    openAssistant();
+  }
+}
+function openAssistant() {
+  // Refresh context every time the panel opens
+  renderAssistantContext();
+  document.getElementById('assistantOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('chatInput').focus(), 350);
+}
+function closeAssistant() {
+  document.getElementById('assistantOverlay').classList.remove('open');
+}
+
+// ==========================================
+// AI ASSISTANT — CONTEXT-AWARE SETUP
+// ==========================================
+function renderAssistantContext() {
+  const walletLoaded = !!currentWallet;
+  const subEl  = document.getElementById('assistantPanelSub');
+  const chipsEl = document.getElementById('suggestionChips');
+
+  if (walletLoaded) {
+    subEl.textContent = 'Ask about this wallet in plain English';
+    chipsEl.innerHTML = [
+      'Why was this wallet flagged?',
+      'How urgent is this?',
+      'What should I do next?',
+      'What does mixer use mean?'
+    ].map(q => `<button class="suggestion-chip" onclick="sendSuggestion('${q.replace(/'/g, "\\'")}")">${q}</button>`).join('');
+  } else {
+    subEl.textContent = 'Ask a general question about FlowTrace';
+    chipsEl.innerHTML = [
+      'How does risk scoring work?',
+      'What data does this use?',
+      'How do I get started?',
+      'What is a mixer?'
+    ].map(q => `<button class="suggestion-chip" onclick="sendSuggestion('${q.replace(/'/g, "\\'")}")">${q}</button>`).join('');
+  }
+}
+
+function resetChat() {
+  document.getElementById('chatMessages').innerHTML = '';
+  const walletLoaded = !!currentWallet;
+  const greeting = walletLoaded
+    ? "Hi, I\u2019m here to help you understand this wallet\u2019s risk assessment. Ask me anything, or try a suggestion below."
+    : "Search for a wallet first, and I can help you understand what comes back. Or ask me a general question about how FlowTrace works.";
+  addMessage('assistant', greeting);
+}
+
+// ==========================================
+// AI ASSISTANT — CHAT
+// ==========================================
+function addMessage(role, text) {
+  const messages = document.getElementById('chatMessages');
+  const msg = document.createElement('div');
+  msg.className = 'chat-msg ' + role;
+  msg.innerHTML = `<div class="chat-sender">${role === 'assistant' ? 'FlowTrace Assistant' : 'You'}</div><div class="chat-bubble">${text}</div>`;
+  messages.appendChild(msg);
+  messages.scrollTop = messages.scrollHeight;
+}
+function addTypingIndicator() {
+  const messages = document.getElementById('chatMessages');
+  const el = document.createElement('div');
+  el.className = 'chat-msg assistant';
+  el.id = 'typingIndicator';
+  el.innerHTML = `<div class="chat-sender">FlowTrace Assistant</div><div class="typing-indicator"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+  messages.appendChild(el);
+  messages.scrollTop = messages.scrollHeight;
+}
+function removeTypingIndicator() {
+  const el = document.getElementById('typingIndicator');
+  if (el) el.remove();
+}
+function sendSuggestion(text) {
+  document.getElementById('chatInput').value = text;
+  sendChat();
+}
+
+async function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text  = input.value.trim();
+  if (!text) return;
+  input.value = '';
+  addMessage('user', text);
+  addTypingIndicator();
+
+  if (USE_REAL_AI) {
+    // Build payload for the backend
+    const payload = {
+      userQuestion:  text,
+      walletLoaded:  !!currentWallet,
+      walletAddress: currentWallet || '',
+      riskScore:     currentWallet ? WALLETS[currentWallet].score : null,
+      flaggedReasons: currentWallet ? WALLETS[currentWallet].flags : []
+    };
+
+    // 8-second timeout via AbortController
+    const controller = new AbortController();
+    const timeoutId  = setTimeout(() => controller.abort(), 8000);
+
+    try {
+      const response = await fetch('/api/assistant', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify(payload),
+        signal:  controller.signal
+      });
+      clearTimeout(timeoutId);
+
+      if (response.ok) {
+        const data = await response.json();
+        if (data.reply) {
+          removeTypingIndicator();
+          addMessage('assistant', data.reply);
+          return; // success — skip fallback
+        }
+      }
+      // Non-OK response → fall through to keyword fallback
+    } catch (_err) {
+      clearTimeout(timeoutId);
+      // Network error, timeout, or abort → fall through to keyword fallback
+    }
+  }
+
+  // Keyword fallback (also used when USE_REAL_AI = false)
+  setTimeout(() => {
+    removeTypingIndicator();
+    addMessage('assistant', getResponse(text));
+  }, USE_REAL_AI ? 0 : 820); // if we already waited on fetch, no extra delay needed
+}
+
+// ==========================================
+// AI ASSISTANT — SCRIPTED KEYWORD RESPONSES
+// ==========================================
+function getResponse(text) {
+  const lower = text.toLowerCase();
+
+  // No wallet loaded — general-context responses
+  if (!currentWallet) {
+    if (lower.includes('how') || lower.includes('work')) {
+      return 'FlowTrace analyzes wallet transaction patterns against known risk indicators \u2014 like mixer use, circular transactions, and links to flagged addresses \u2014 to generate a risk score investigators can act on.';
+    }
+    if (lower.includes('data')) {
+      return 'This demo uses a small set of mock wallets to demonstrate the workflow. A production version would connect to real blockchain data sources.';
+    }
+    if (lower.includes('start') || lower.includes('begin')) {
+      return 'Enter any wallet address in the search bar, or click one of the example addresses to see a full risk analysis.';
+    }
+    if (lower.includes('mixer') || lower.includes('tumbler')) {
+      return 'A <strong>mixer</strong> (also called a tumbler) blends funds from many users to obscure which funds came from which sender \u2014 used to break the traceable link between a wallet and its on-chain history.';
+    }
+    return 'I can explain how FlowTrace works, or help you understand a wallet\u2019s risk assessment once you\u2019ve searched one \u2014 what would you like to know?';
+  }
+
+  // Wallet IS loaded — wallet-aware responses
+  const data  = WALLETS[currentWallet];
+  const flags = data.flags;
+
+  if (lower.includes('why') || lower.includes('flagged') || lower.includes('flag')) {
+    return `This wallet was flagged for: <strong>${flags[0]}</strong>${flags[1] ? ' and <strong>' + flags[1] + '</strong>' : ''}. These patterns are commonly associated with attempts to obscure fund origin or layer illicit transactions.`;
+  }
+  if (lower.includes('urgent') || lower.includes('priority')) {
+    const s = data.score;
+    if (s >= 80) return `<strong>High priority</strong> \u2014 recommend immediate review and exchange KYC request. A risk score of ${s}/100 indicates significant red flags that warrant urgent attention.`;
+    if (s >= 50) return `<strong>Moderate risk</strong> \u2014 worth monitoring, not immediately urgent. Score: ${s}/100. Consider cross-referencing against known addresses before escalating.`;
+    return `<strong>Low risk</strong> \u2014 no immediate action needed. Score: ${s}/100. Continue routine monitoring.`;
+  }
+  if (lower.includes('next') || lower.includes('what should') || lower.includes(' do ') || lower.includes('do next')) {
+    return 'Consider: (1) Cross-referencing against known exchange deposit addresses, (2) Requesting KYC data through legal process if linked to an exchange, (3) Checking related wallets visible in the transaction graph for further connections.';
+  }
+  if (lower.includes('mixer') || lower.includes('tumbler')) {
+    return 'A <strong>mixer</strong> (also called a tumbler) blends funds from many users to obscure which funds came from which sender \u2014 used to break the traceable link between a wallet and its on-chain history. Mixer use is a strong indicator of deliberate obfuscation.';
+  }
+  if (lower.includes('chain-hop') || lower.includes('chain hop')) {
+    return '<strong>Chain-hopping</strong> refers to moving funds across multiple wallets or blockchains in quick succession, making the money trail harder to follow manually. It is a common layering technique.';
+  }
+  if (lower.includes('dex') || lower.includes('swap') || lower.includes('decentralized')) {
+    return 'A <strong>DEX (decentralized exchange) swap</strong> lets someone trade one cryptocurrency for another without a centralized exchange \u2014 sometimes used to change a token\u2019s identity mid-trail, complicating tracing efforts.';
+  }
+  if (lower.includes('circular')) {
+    return '<strong>Circular transactions</strong> occur when funds are sent from a wallet through a chain of other wallets and eventually return to the originating wallet \u2014 a layering technique used to generate the appearance of legitimate activity.';
+  }
+  if (lower.includes('score') || lower.includes('risk') || lower.includes('number')) {
+    return `This wallet has a risk score of <strong>${data.score}/100</strong> \u2014 ${data.score >= 75 ? 'High Risk' : data.score >= 50 ? 'Moderate Risk' : 'Low Risk'}. The score is based on ${flags.length} flagged pattern${flags.length > 1 ? 's' : ''}: ${flags.join(' and ')}.`;
+  }
+  return 'I can explain this wallet\u2019s risk score, flagged patterns, or suggest next steps \u2014 try asking about any of those, or ask what a specific term means.';
+}
+
+// ==========================================
+// INVESTIGATION REPORT
+// ==========================================
+function openReport() {
+  if (!currentWallet) return;
+  const data = WALLETS[currentWallet];
+  const { label } = riskMeta(data.score);
+  document.getElementById('rpt-wallet').textContent = currentWallet;
+  document.getElementById('rpt-score').textContent = data.score + ' / 100';
+  document.getElementById('rpt-level').textContent = label;
+  document.getElementById('rpt-flags').innerHTML = data.flags.map(f => '<li>' + f + '</li>').join('');
+  document.getElementById('rpt-timestamp').textContent = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST';
+  document.getElementById('reportModal').classList.add('open');
+}
+function closeReport() {
+  document.getElementById('reportModal').classList.remove('open');
+}
+function showDownloadNotice() {
+  alert('PDF download is non-functional in this prototype demo. In a production build, this would generate a formatted PDF report.');
+}
+
+// Close modal on backdrop click
+document.getElementById('reportModal').addEventListener('click', function(e) {
+  if (e.target === this) closeReport();
+});
+
+// Keyboard accessibility
+document.querySelectorAll('.example-chip').forEach(chip => {
+  chip.addEventListener('keydown', e => {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectChip(chip); }
+  });
+});
+document.addEventListener('keydown', e => {
+  if (e.key === 'Escape') { closeAssistant(); closeReport(); }
+});
+</script>
+</body>
+</html>
