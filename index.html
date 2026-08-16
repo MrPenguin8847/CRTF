@@ -284,6 +284,52 @@
       border: 1px solid rgba(77,144,212,0.25);
       border-radius: 4px; padding: 2px 8px;
     }
+
+    /* CASE TRACKING */
+    .chrome-actions { display: flex; align-items: center; gap: 8px; }
+    .chrome-btn {
+      background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
+      color: #E8E9EB; font-size: 0.75rem; padding: 4px 10px; border-radius: 4px;
+      cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 500;
+      transition: background 0.2s;
+    }
+    .chrome-btn:hover { background: rgba(255,255,255,0.1); }
+    .cases-badge {
+      background: #3A7ABE; color: white; padding: 0 5px; border-radius: 10px;
+      font-size: 0.65rem; font-weight: bold; min-width: 18px; text-align: center;
+    }
+    .cases-badge.hidden { display: none; }
+
+    #screen-cases { padding: 40px 48px; }
+    .cases-header { margin-bottom: 32px; display: flex; justify-content: space-between; align-items: center; }
+    .cases-title { font-size: 1.4rem; font-weight: 600; color: #E8E9EB; }
+    .cases-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 16px; }
+    .case-card {
+      background: #1A1D23; border: 1px solid #272B34; border-radius: 8px;
+      padding: 16px; cursor: pointer; transition: border-color 0.2s, background 0.2s;
+      position: relative; display: flex; flex-direction: column; gap: 12px;
+    }
+    .case-card:hover { border-color: #374151; background: #1f232a; }
+    .case-card-header { display: flex; justify-content: space-between; align-items: flex-start; }
+    .case-address { font-weight: 600; color: #E8E9EB; font-family: "Courier New", monospace; font-size: 0.9rem; margin-bottom: 6px; }
+    .case-unflag {
+      background: none; border: none; color: #8A8D93; cursor: pointer; padding: 4px;
+      border-radius: 4px; transition: color 0.2s; z-index: 2; margin-left: auto; display: flex;
+    }
+    .case-unflag:hover { color: #FCA5A5; background: rgba(255,255,255,0.05); }
+    .case-reason { font-size: 0.8rem; color: #8A8D93; display: flex; align-items: center; gap: 6px; }
+    .case-meta { font-size: 0.7rem; color: #55585F; margin-top: auto; padding-top: 12px; border-top: 1px solid #272B34; }
+    .empty-cases { text-align: center; padding: 80px 20px; color: #8A8D93; font-size: 0.95rem; grid-column: 1 / -1; }
+    
+    .flag-case-btn {
+      background: transparent; border: 1px solid #374151; color: #E8E9EB;
+      padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; font-weight: 500;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: all 0.2s; margin-top: 24px; width: 100%;
+    }
+    .flag-case-btn:hover { border-color: #4B9EFF; color: #93C5FD; }
+    .flag-case-btn.active { background: rgba(75,158,255,0.1); border-color: #4B9EFF; color: #93C5FD; }
+
     .tool-inner { padding: 0; position: relative; }
 
     /* SEARCH SCREEN */
@@ -841,7 +887,14 @@
           <div class="chrome-dot green"></div>
         </div>
         <div class="chrome-title">FlowTrace &mdash; Wallet Intelligence Dashboard</div>
-        <div class="chrome-badge">Demo Mode</div>
+        <div class="chrome-actions">
+          <button class="chrome-btn" onclick="openMyCases()" aria-label="My Cases">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+            My Cases
+            <span id="casesCountBadge" class="cases-badge hidden">0</span>
+          </button>
+          <div class="chrome-badge">Demo Mode</div>
+        </div>
       </div>
 
       <div class="tool-inner">
@@ -937,6 +990,10 @@
                   <text x="90" y="106" text-anchor="middle" class="gauge-sub-text">out of 100</text>
                 </svg>
                 <div id="riskLabel" class="risk-label-badge risk-high">High Risk</div>
+                <button id="flagCaseBtn" class="flag-case-btn" onclick="toggleFlagCurrentWallet()" aria-label="Flag for case">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                  <span>Flag for case</span>
+                </button>
               </div>
 
               <div class="anim-fade anim-delay-1" id="flags-wrap">
@@ -964,9 +1021,9 @@
               <div class="graph-header">
                 <div class="graph-title">Transaction Flow Graph</div>
                 <div class="graph-legend">
-                  <div class="graph-legend-item"><div class="legend-dot" style="background:#4B9EFF"></div> Searched wallet</div>
-                  <div class="graph-legend-item"><div class="legend-dot" style="background:#4B5563"></div> Connected wallet</div>
-                  <div class="graph-legend-item"><div class="legend-dot" style="background:#F87171"></div> Flagged wallet</div>
+                  <div class="graph-legend-item"><div class="legend-dot" style="background:#4ADE80"></div> Low risk</div>
+                  <div class="graph-legend-item"><div class="legend-dot" style="background:#FBBF24"></div> Moderate risk</div>
+                  <div class="graph-legend-item"><div class="legend-dot" style="background:#F87171"></div> High risk</div>
                 </div>
               </div>
               <canvas id="txGraph" aria-label="Transaction flow graph"></canvas>
@@ -974,6 +1031,20 @@
             </div>
           </div>
         </div>
+      <!-- MY CASES SCREEN -->
+      <div id="screen-cases" class="screen" role="region" aria-label="My Cases">
+        <div class="cases-header">
+          <h2 class="cases-title">My Tracked Cases</h2>
+          <div class="results-back" onclick="goBack()" role="button" tabindex="0" aria-label="Back to search" onkeydown="if(event.key==='Enter')goBack()" style="position:static;margin:0;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            Back to Search
+          </div>
+        </div>
+        <div class="cases-grid" id="cases-grid">
+          <!-- Dynamically populated via JS -->
+        </div>
+      </div>
+
       </div><!-- /tool-inner -->
     </div><!-- /tool-container -->
   </div>
@@ -1138,12 +1209,12 @@ Object.keys(WALLETS).forEach(k => { WALLET_LOOKUP[k.toLowerCase()] = k; });
 const GRAPH_DATA = {
   '0x7fC2a9B4d8E1c6A3f0D5b7E9a1C4d6F8b2E0a3C7': {
     nodes: [
-      { id: 'center', label: '0x7fC2\u2026a3C7', type: 'center' },
-      { id: 'n1', label: '0xD3a1\u2026b7F2', type: 'flagged' },
-      { id: 'n2', label: '0xBnc\u2026ce01', type: 'normal' },
-      { id: 'n3', label: '0xF9c4\u2026a1E8', type: 'flagged' },
-      { id: 'n4', label: '0x2A5f\u2026d0C3', type: 'normal' },
-      { id: 'n5', label: '0x8Eb7\u20263fA9', type: 'normal' },
+      { id: 'center', address: '0x7fC2a9B4d8E1c6A3f0D5b7E9a1C4d6F8b2E0a3C7', score: 85 },
+      { id: 'n1', address: '0xC4e7A1d9F2b6c8E0a5D3f7B1c9A4e6D8b0F2a7C1', score: 70 },
+      { id: 'n2', address: '0x1B3c9D7a2F4e8A6b5C0d9E1f2A4b6C8d0E3f5A7c', score: 15 },
+      { id: 'n3', address: '0x9aD3f6C1b8E4a0F7d2C5b9E1a6D8c3F0b4A7e2D5', score: 92 },
+      { id: 'n4', address: '0x2D5e8A1c4B7f9D0a3C6e2B5f8A1d4C7b0E3f6A9d', score: 30 },
+      { id: 'n5', address: '0xA6d0F3b8C1e7D4a9F2c5B0e6D8a1C7f4B9d3E0a2', score: 45 },
     ],
     edges: [
       { from: 'center', to: 'n1', amount: '0.82 ETH', hash: '0xabc\u20261f2d', dir: 'out' },
@@ -1155,11 +1226,11 @@ const GRAPH_DATA = {
   },
   '0xC4e7A1d9F2b6c8E0a5D3f7B1c9A4e6D8b0F2a7C1': {
     nodes: [
-      { id: 'center', label: '0xC4e7\u2026a7C1', type: 'center' },
-      { id: 'n1', label: '0xFlg\u20263e2a', type: 'flagged' },
-      { id: 'n2', label: '0x4A1f\u2026c9D0', type: 'normal' },
-      { id: 'n3', label: '0x7Bc3\u2026e5F1', type: 'normal' },
-      { id: 'n4', label: '0xE9d2\u20260aB6', type: 'normal' },
+      { id: 'center', address: '0xC4e7A1d9F2b6c8E0a5D3f7B1c9A4e6D8b0F2a7C1', score: 70 },
+      { id: 'n1', address: '0x7fC2a9B4d8E1c6A3f0D5b7E9a1C4d6F8b2E0a3C7', score: 85 },
+      { id: 'n2', address: '0x3F6a9B1c4D7e2A0f5C8b3D6e9A1c4B7f0E2d5A8c', score: 25 },
+      { id: 'n3', address: '0xE1b5C9a2F7d3A8c0B6e4D1f9A3c7E2b5D8f0a6C4', score: 60 },
+      { id: 'n4', address: '0x4A1b7C0d3E6f9A2b5D8c1E4f7A0b3D6c9F2e5A8b', score: 10 },
     ],
     edges: [
       { from: 'n1', to: 'center', amount: '0.32 ETH', hash: '0x11a\u20269c3d', dir: 'in' },
@@ -1170,12 +1241,12 @@ const GRAPH_DATA = {
   },
   '0x9aD3f6C1b8E4a0F7d2C5b9E1a6D8c3F0b4A7e2D5': {
     nodes: [
-      { id: 'center', label: '0x9aD3\u2026e2D5', type: 'center' },
-      { id: 'n1', label: '0xMix\u20264f1a', type: 'flagged' },
-      { id: 'n2', label: '0xMix\u20267c2b', type: 'flagged' },
-      { id: 'n3', label: '0x1Fc5\u2026d3A9', type: 'normal' },
-      { id: 'n4', label: '0x6Bd8\u2026e0F4', type: 'flagged' },
-      { id: 'n5', label: '0x0Ca2\u2026b8E6', type: 'normal' },
+      { id: 'center', address: '0x9aD3f6C1b8E4a0F7d2C5b9E1a6D8c3F0b4A7e2D5', score: 92 },
+      { id: 'n1', address: '0x5C8b1E4f7A0d3B6c9F2a5D8e1B4c7A0f3D6e9B2a', score: 88 },
+      { id: 'n2', address: '0x7fC2a9B4d8E1c6A3f0D5b7E9a1C4d6F8b2E0a3C7', score: 85 },
+      { id: 'n3', address: '0x6D9a2C5f8B1e4A7d0C3b6F9a2D5e8B1c4A7f0D3b', score: 35 },
+      { id: 'n4', address: '0xC4e7A1d9F2b6c8E0a5D3f7B1c9A4e6D8b0F2a7C1', score: 70 },
+      { id: 'n5', address: '0x8F1b4E7a0D3c6A9d2B5f8E1c4A7b0D3e6F9a2C5b', score: 20 },
     ],
     edges: [
       { from: 'n1', to: 'center', amount: '7.40 ETH', hash: '0x55e\u20264b7c', dir: 'in' },
@@ -1187,11 +1258,11 @@ const GRAPH_DATA = {
   },
   '0xE1b5C9a2F7d3A8c0B6e4D1f9A3c7E2b5D8f0a6C4': {
     nodes: [
-      { id: 'center', label: '0xE1b5\u2026a6C4', type: 'center' },
-      { id: 'n1', label: '0x3Df0\u2026c1B7', type: 'normal' },
-      { id: 'n2', label: '0x8Ac4\u2026f2D3', type: 'normal' },
-      { id: 'n3', label: '0x5Ce7\u2026a3E1', type: 'normal' },
-      { id: 'n4', label: '0xB2a9\u2026d4F5', type: 'normal' },
+      { id: 'center', address: '0xE1b5C9a2F7d3A8c0B6e4D1f9A3c7E2b5D8f0a6C4', score: 60 },
+      { id: 'n1', address: '0x9E2a5D8b1C4f7A0d3B6c9F2e5A8b1C4d7F0a3B6c', score: 40 },
+      { id: 'n2', address: '0x9aD3f6C1b8E4a0F7d2C5b9E1a6D8c3F0b4A7e2D5', score: 92 },
+      { id: 'n3', address: '0x0A3b6F9d2C5e8B1a4D7c0F3e6A9b2D5c8E1f4A7d', score: 22 },
+      { id: 'n4', address: '0xA6d0F3b8C1e7D4a9F2c5B0e6D8a1C7f4B9d3E0a2', score: 45 },
     ],
     edges: [
       { from: 'center', to: 'n1', amount: '0.22 ETH', hash: '0xaad\u20269a2b', dir: 'out' },
@@ -1203,10 +1274,10 @@ const GRAPH_DATA = {
   },
   '0xA6d0F3b8C1e7D4a9F2c5B0e6D8a1C7f4B9d3E0a2': {
     nodes: [
-      { id: 'center', label: '0xA6d0\u2026E0a2', type: 'center' },
-      { id: 'n1', label: '0xCbase\u20269f3', type: 'normal' },
-      { id: 'n2', label: '0x7Be1\u2026c4A2', type: 'normal' },
-      { id: 'n3', label: '0xD5f8\u2026b0C6', type: 'normal' },
+      { id: 'center', address: '0xA6d0F3b8C1e7D4a9F2c5B0e6D8a1C7f4B9d3E0a2', score: 45 },
+      { id: 'n1', address: '0xC4e7A1d9F2b6c8E0a5D3f7B1c9A4e6D8b0F2a7C1', score: 70 },
+      { id: 'n2', address: '0x2B5e8A1d4C7f0B3e6A9c2D5f8B1e4A7d0C3b6F9a', score: 18 },
+      { id: 'n3', address: '0xE1b5C9a2F7d3A8c0B6e4D1f9A3c7E2b5D8f0a6C4', score: 60 },
     ],
     edges: [
       { from: 'n1', to: 'center', amount: '0.12 ETH', hash: '0x001\u2026f1a2', dir: 'in' },
@@ -1224,6 +1295,99 @@ let animationFrameId = null;
 let graphNodes = [];
 let graphEdges = [];
 let hoveredNode = null;
+let flaggedCases = []; // array of { address, timestamp }
+
+// ==========================================
+// CASE TRACKING
+// ==========================================
+function updateFlagButton() {
+  const btn = document.getElementById('flagCaseBtn');
+  const isFlagged = flaggedCases.some(c => c.address === currentWallet);
+  if (isFlagged) {
+    btn.classList.add('active');
+    btn.querySelector('span').textContent = 'Flagged for case';
+  } else {
+    btn.classList.remove('active');
+    btn.querySelector('span').textContent = 'Flag for case';
+  }
+}
+
+function updateCasesBadge() {
+  const badge = document.getElementById('casesCountBadge');
+  if (flaggedCases.length > 0) {
+    badge.textContent = flaggedCases.length;
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+}
+
+function toggleFlagCurrentWallet() {
+  if (!currentWallet) return;
+  const idx = flaggedCases.findIndex(c => c.address === currentWallet);
+  if (idx > -1) {
+    flaggedCases.splice(idx, 1);
+  } else {
+    flaggedCases.push({ address: currentWallet, timestamp: new Date() });
+  }
+  updateFlagButton();
+  updateCasesBadge();
+}
+
+function unflagCase(evt, address) {
+  evt.stopPropagation();
+  flaggedCases = flaggedCases.filter(c => c.address !== address);
+  updateCasesBadge();
+  renderMyCases();
+}
+
+function renderMyCases() {
+  const grid = document.getElementById('cases-grid');
+  grid.innerHTML = '';
+  
+  if (flaggedCases.length === 0) {
+    grid.innerHTML = '<div class="empty-cases">No wallets flagged yet &mdash; flag a wallet from its Results screen to track it here.</div>';
+    return;
+  }
+  
+  flaggedCases.forEach(c => {
+    const data = WALLETS[c.address];
+    if (!data) return;
+    const meta = riskMeta(data.score);
+    const topReason = data.flags[0] || 'Flagged for review';
+    const timeStr = c.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const dateStr = c.timestamp.toLocaleDateString();
+    
+    grid.innerHTML += `
+      <div class="case-card" onclick="goToCase('${c.address}')">
+        <div class="case-card-header">
+          <div>
+            <div class="case-address">${c.address.slice(0, 8)}...${c.address.slice(-6)}</div>
+            <div class="risk-label-badge ${meta.cls}" style="font-size:0.7rem;padding:2px 6px;">${meta.label}</div>
+          </div>
+          <button class="case-unflag" onclick="unflagCase(event, '${c.address}')" aria-label="Unflag wallet">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
+        </div>
+        <div class="case-reason">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+          ${topReason}
+        </div>
+        <div class="case-meta">Flagged: ${dateStr} at ${timeStr}</div>
+      </div>
+    `;
+  });
+}
+
+function openMyCases() {
+  renderMyCases();
+  showScreen('cases');
+}
+
+function goToCase(address) {
+  document.getElementById('wallet-input').value = address;
+  analyzeWallet();
+}
 
 // ==========================================
 // NAVIGATION
@@ -1302,6 +1466,7 @@ function analyzeWallet() {
 
   setTimeout(() => drawGraph(key), 150);
   resetChat();
+  updateFlagButton();
 }
 
 // ==========================================
@@ -1349,10 +1514,11 @@ function drawGraph(walletKey) {
   const cx = W / 2, cy = H / 2;
   const radius = Math.min(W, H) * 0.33;
   const nodeMap = {};
-  const peripheral = gData.nodes.filter(n => n.type !== 'center');
+  const peripheral = gData.nodes.filter(n => n.id !== 'center');
 
   gData.nodes.forEach(n => {
-    if (n.type === 'center') {
+    n.label = n.address.slice(0, 6) + '\u2026' + n.address.slice(-4);
+    if (n.id === 'center') {
       nodeMap[n.id] = { ...n, x: cx, y: cy };
     }
   });
@@ -1365,22 +1531,34 @@ function drawGraph(walletKey) {
   graphEdges = gData.edges.map(e => ({ ...e, fromNode: nodeMap[e.from], toNode: nodeMap[e.to] }));
   hoveredNode = null;
 
+  canvas.onclick = (evt) => {
+    if (hoveredNode && hoveredNode.id !== 'center') {
+      if (WALLETS[hoveredNode.address]) {
+        document.getElementById('wallet-input').value = hoveredNode.address;
+        analyzeWallet();
+      }
+    }
+  };
+
   canvas.onmousemove = (evt) => {
     const rect = canvas.getBoundingClientRect();
     const mx = evt.clientX - rect.left;
     const my = evt.clientY - rect.top;
     let found = null;
     for (const n of graphNodes) {
-      const r = n.type === 'center' ? 22 : 15;
+      const r = n.id === 'center' ? 22 : 15;
       if (Math.hypot(mx - n.x, my - n.y) < r) { found = n; break; }
     }
     hoveredNode = found;
+    canvas.style.cursor = (found && found.id !== 'center' && WALLETS[found.address]) ? 'pointer' : 'default';
+
     if (found) {
       const edge = graphEdges.find(e => e.fromNode === found || e.toNode === found);
+      const { label, color } = riskMeta(found.score);
       tooltip.innerHTML = `
-        <div style="font-weight:600;color:#F1F1EF;">${found.label}</div>
-        ${edge ? `<div class="graph-tooltip-hash">Tx: ${edge.hash}</div><div class="graph-tooltip-amount">${edge.amount}</div>` : ''}
-        <div style="margin-top:4px;font-size:0.7rem;color:${found.type==='flagged'?'#F87171':found.type==='center'?'#4B9EFF':'#9CA3AF'};">${found.type==='flagged'?'\u26a0 Flagged':found.type==='center'?'\uD83D\uDD0D Searched wallet':'Connected wallet'}</div>
+        <div style="font-weight:600;color:#E8E9EB;">${found.address}</div>
+        <div style="margin-top:4px;font-size:0.75rem;color:${color};font-weight:600;">Risk: ${found.score}/100 &mdash; ${label}</div>
+        ${edge ? `<div class="graph-tooltip-hash" style="margin-top:8px;">Tx: ${edge.hash}</div><div class="graph-tooltip-amount">${edge.amount}</div>` : ''}
       `;
       tooltip.style.left = (mx + 14) + 'px';
       tooltip.style.top = (my - 20) + 'px';
@@ -1456,15 +1634,17 @@ function drawGraph(walletKey) {
     graphNodes.forEach(n => {
       if (!n) return;
       const isHovered = hoveredNode === n;
-      const r = n.type === 'center' ? 22 : 15;
+      const r = n.id === 'center' ? 22 : 15;
       const dr = isHovered ? r + 4 : r;
+
       let fill, stroke, glowColor;
-      if (n.type === 'center') {
-        fill = '#1A5FA8'; stroke = isHovered ? '#93C5FD' : '#4B9EFF'; glowColor = 'rgba(75,158,255,0.3)';
-      } else if (n.type === 'flagged') {
-        fill = '#2D1A1A'; stroke = isHovered ? '#FCA5A5' : '#F87171'; glowColor = 'rgba(248,113,113,0.25)';
+      
+      if (n.score >= 75) {
+         fill = 'rgba(248,113,113,0.12)'; stroke = '#F87171'; glowColor = 'rgba(248,113,113,0.25)';
+      } else if (n.score >= 50) {
+         fill = 'rgba(251,191,36,0.12)'; stroke = '#FBBF24'; glowColor = 'rgba(251,191,36,0.25)';
       } else {
-        fill = '#1A2030'; stroke = isHovered ? '#9CA3AF' : '#374151'; glowColor = 'rgba(255,255,255,0.08)';
+         fill = 'rgba(74,222,128,0.12)'; stroke = '#4ADE80'; glowColor = 'rgba(74,222,128,0.25)';
       }
 
       if (isHovered) {
@@ -1483,22 +1663,21 @@ function drawGraph(walletKey) {
       ctx.fill();
       ctx.strokeStyle = stroke;
       ctx.lineWidth = isHovered ? 2.5 : 1.5;
+      if (n.id === 'center') ctx.lineWidth += 1;
       ctx.stroke();
 
       // Node icon
       ctx.save();
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      if (n.type === 'center') {
-        ctx.fillStyle = '#DBEAFE';
+      ctx.fillStyle = stroke;
+      if (n.id === 'center') {
         ctx.font = 'bold 12px Inter, sans-serif';
         ctx.fillText('\uD83D\uDD0D', n.x, n.y);
-      } else if (n.type === 'flagged') {
-        ctx.fillStyle = '#F87171';
+      } else if (n.score >= 75) {
         ctx.font = '13px Inter, sans-serif';
         ctx.fillText('\u26A0', n.x, n.y);
       } else {
-        ctx.fillStyle = '#6B7280';
         ctx.font = '11px Inter, sans-serif';
         ctx.fillText('\u25CB', n.x, n.y);
       }
@@ -1506,7 +1685,7 @@ function drawGraph(walletKey) {
 
       // Label
       ctx.save();
-      ctx.fillStyle = n.type === 'center' ? '#93C5FD' : n.type === 'flagged' ? '#FCA5A5' : '#6B7280';
+      ctx.fillStyle = isHovered ? '#E8E9EB' : '#8A8D93';
       ctx.font = '9px "Courier New", monospace';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
