@@ -94,8 +94,17 @@
       padding: 110px 0 100px;
       background: var(--bg);
       border-bottom: 1px solid var(--border);
+      position: relative;
+      overflow: hidden;
     }
-    .hero-inner { max-width: 1120px; margin: 0 auto; padding: 0 40px; text-align: center; }
+    .hero-network-canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+    .hero-inner { max-width: 1120px; margin: 0 auto; padding: 0 40px; text-align: center; position: relative; z-index: 2; }
     .hero-badge {
       display: inline-flex; align-items: center; gap: 8px;
       background: var(--accent-light); color: var(--accent);
@@ -859,6 +868,7 @@
 
 <!-- HERO -->
 <section class="hero" id="hero" aria-labelledby="hero-headline">
+  <canvas id="hero-network-canvas" class="hero-network-canvas" aria-hidden="true"></canvas>
   <div class="hero-inner">
     <div class="hero-badge">
       <span class="hero-badge-dot"></span>
@@ -2412,6 +2422,104 @@ document.querySelectorAll('.example-chip').forEach(chip => {
 document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeAssistant(); closeReport(); }
 });
+// ==========================================
+// HERO AMBIENT NETWORK ANIMATION
+// ==========================================
+(function initHeroNetwork() {
+  const canvas = document.getElementById('hero-network-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d', { alpha: true });
+  let width, height;
+  let particles = [];
+  const MAX_PARTICLES = 22;
+  const CONNECTION_DIST = 180;
+  let isVisible = true;
+  let animId = null;
+
+  function resize() {
+    width = canvas.parentElement.offsetWidth;
+    height = canvas.parentElement.offsetHeight;
+    canvas.width = width * window.devicePixelRatio;
+    canvas.height = height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+    initParticles();
+  }
+
+  function initParticles() {
+    particles = [];
+    for (let i = 0; i < MAX_PARTICLES; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.15, // Barely perceptible drift
+        vy: (Math.random() - 0.5) * 0.15,
+        radius: Math.random() * 1.5 + 1
+      });
+    }
+  }
+
+  function draw() {
+    if (!isVisible) return;
+    ctx.clearRect(0, 0, width, height);
+    
+    // Update & draw particles
+    ctx.fillStyle = 'rgba(58, 122, 190, 0.15)'; // --accent at very low opacity
+    particles.forEach(p => {
+      p.x += p.vx;
+      p.y += p.vy;
+      // Bounce off edges smoothly
+      if (p.x < 0 || p.x > width) p.vx *= -1;
+      if (p.y < 0 || p.y > height) p.vy *= -1;
+      
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Draw connections
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const distSq = dx*dx + dy*dy;
+        const maxDistSq = CONNECTION_DIST * CONNECTION_DIST;
+        
+        if (distSq < maxDistSq) {
+          const opacity = (1 - Math.sqrt(distSq) / CONNECTION_DIST) * 0.12;
+          ctx.strokeStyle = `rgba(58, 122, 190, ${opacity})`;
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.stroke();
+        }
+      }
+    }
+    
+    animId = requestAnimationFrame(draw);
+  }
+
+  window.addEventListener('resize', () => {
+    if (animId) cancelAnimationFrame(animId);
+    resize();
+    if (isVisible) draw();
+  });
+
+  // Pause when out of view
+  const observer = new IntersectionObserver((entries) => {
+    isVisible = entries[0].isIntersecting;
+    if (isVisible) {
+      if (animId) cancelAnimationFrame(animId);
+      draw();
+    } else {
+      if (animId) cancelAnimationFrame(animId);
+    }
+  }, { threshold: 0 });
+  observer.observe(canvas.parentElement);
+
+  resize();
+})();
+
 </script>
 </body>
 </html>
