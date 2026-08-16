@@ -8,6 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     /* ==========================================
        DESIGN TOKENS
@@ -1166,7 +1167,7 @@
     </div>
     <div class="modal-footer">
       <button class="btn-modal-cancel" onclick="closeReport()">Close</button>
-      <button class="btn-download" onclick="showDownloadNotice()" aria-label="Download PDF report">
+      <button class="btn-download" onclick="downloadPDF()" aria-label="Download PDF report">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
         </svg>
@@ -1928,8 +1929,146 @@ function openReport() {
 function closeReport() {
   document.getElementById('reportModal').classList.remove('open');
 }
-function showDownloadNotice() {
-  alert('PDF download is non-functional in this prototype demo. In a production build, this would generate a formatted PDF report.');
+function downloadPDF() {
+  if (!currentWallet) return;
+  const data = WALLETS[currentWallet];
+  const { label } = riskMeta(data.score);
+  const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST';
+  const shortAddr = currentWallet.slice(0, 10) + '\u2026' + currentWallet.slice(-6);
+
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  const PAGE_W = 210;
+  const MARGIN = 18;
+  const CONTENT_W = PAGE_W - MARGIN * 2;
+  let y = 0;
+
+  // ---- HEADER BAND ----
+  doc.setFillColor(26, 29, 35);           // #1A1D23
+  doc.rect(0, 0, PAGE_W, 36, 'F');
+
+  doc.setFontSize(18);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(232, 233, 235);        // #E8E9EB
+  doc.text('FlowTrace', MARGIN, 14);
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(138, 141, 147);        // #8A8D93
+  doc.text('Wallet Risk Intelligence — Chandigarh Police Hackathon 2026', MARGIN, 21);
+
+  doc.setFontSize(9);
+  doc.setTextColor(138, 141, 147);
+  doc.text('INVESTIGATION REPORT', PAGE_W - MARGIN, 14, { align: 'right' });
+  doc.text(timestamp, PAGE_W - MARGIN, 21, { align: 'right' });
+
+  y = 46;
+
+  // ---- WALLET ADDRESS ----
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(138, 141, 147);
+  doc.text('WALLET ADDRESS', MARGIN, y);
+  y += 5;
+  doc.setFontSize(11);
+  doc.setFont('courier', 'normal');
+  doc.setTextColor(30, 30, 30);
+  doc.text(currentWallet, MARGIN, y);
+  y += 10;
+
+  // ---- DIVIDER ----
+  doc.setDrawColor(220, 220, 218);        // #DCDCD8-ish
+  doc.setLineWidth(0.4);
+  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  y += 8;
+
+  // ---- RISK SCORE ROW ----
+  // Score box
+  const scoreColor = data.score >= 75 ? [220, 38, 38] : data.score >= 50 ? [217, 119, 6] : [22, 163, 74];
+  doc.setFillColor(...scoreColor);
+  doc.roundedRect(MARGIN, y - 4, 32, 14, 2, 2, 'F');
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(255, 255, 255);
+  doc.text(String(data.score), MARGIN + 16, y + 5.5, { align: 'center' });
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(80, 80, 80);
+  doc.text('out of 100', MARGIN + 36, y + 1);
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...scoreColor);
+  doc.text(label, MARGIN + 36, y + 7.5);
+  y += 20;
+
+  // ---- FLAGGED REASONS ----
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(80, 80, 80);
+  doc.text('FLAGGED REASONS', MARGIN, y);
+  y += 5;
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(30, 30, 30);
+  data.flags.forEach((flag, i) => {
+    doc.text('\u2022  ' + flag, MARGIN + 2, y);
+    y += 7;
+  });
+  y += 4;
+
+  // ---- WALLET METADATA ----
+  doc.setDrawColor(220, 220, 218);
+  doc.line(MARGIN, y, PAGE_W - MARGIN, y);
+  y += 8;
+
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(80, 80, 80);
+  doc.text('WALLET DETAILS', MARGIN, y);
+  y += 6;
+
+  const metaRows = [
+    ['Chain',           data.chain],
+    ['Total Transactions', String(data.txCount)],
+    ['Total Volume',    data.volume],
+    ['First Seen',      data.firstSeen],
+    ['Last Seen',       data.lastSeen],
+  ];
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'normal');
+  metaRows.forEach(([k, v]) => {
+    doc.setTextColor(100, 100, 100);
+    doc.text(k, MARGIN, y);
+    doc.setTextColor(30, 30, 30);
+    doc.text(v, MARGIN + 55, y);
+    y += 6;
+  });
+  y += 6;
+
+  // ---- DISCLAIMER ----
+  doc.setFillColor(250, 250, 248);
+  doc.roundedRect(MARGIN, y, CONTENT_W, 22, 2, 2, 'F');
+  doc.setFontSize(7.5);
+  doc.setFont('helvetica', 'italic');
+  doc.setTextColor(100, 100, 100);
+  const disclaimer = '⚠ Risk scores are investigative leads, not legal proof. Identifying a real person behind a wallet requires exchange KYC data obtained through legal process. This report is for internal investigative use only.';
+  const lines = doc.splitTextToSize(disclaimer, CONTENT_W - 8);
+  doc.text(lines, MARGIN + 4, y + 6);
+  y += 28;
+
+  // ---- FOOTER ----
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(160, 160, 160);
+  doc.text('Generated by FlowTrace · Chandigarh Police Hackathon 2026 · ' + timestamp, MARGIN, 287);
+
+  // ---- SAVE ----
+  const filename = 'flowtrace-report-' + currentWallet.slice(0, 8) + '.pdf';
+  doc.save(filename);
 }
 
 // Close modal on backdrop click
