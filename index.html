@@ -403,6 +403,25 @@
     }
     .search-input::placeholder { color: #3D4049; }
     .search-input:focus { outline: none; border-color: #4D90D4; }
+    .search-input.error {
+      border-color: #F87171;
+      animation: shake 0.32s ease;
+    }
+    @keyframes shake {
+      0%,100% { transform: translateX(0); }
+      20%      { transform: translateX(-6px); }
+      40%      { transform: translateX(6px); }
+      60%      { transform: translateX(-4px); }
+      80%      { transform: translateX(3px); }
+    }
+    .search-error-msg {
+      font-size: 0.78rem;
+      color: #F87171;
+      margin-top: 8px;
+      min-height: 1.2em;
+      transition: opacity 0.3s;
+    }
+    .search-error-msg:empty { opacity: 0; }
     .search-btn {
       background: #3A7ABE; color: #fff;
       border-radius: 10px; padding: 14px 28px;
@@ -1023,6 +1042,7 @@
               <input type="text" class="search-input" id="wallet-input"
                 placeholder="Enter wallet address (e.g. 0x7fC2a9B4...)"
                 aria-label="Wallet address input"
+                oninput="clearSearchError()"
                 onkeydown="if(event.key==='Enter')analyzeWallet()" />
               <button class="search-btn" onclick="analyzeWallet()" id="analyze-btn" aria-label="Analyze wallet">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -1031,6 +1051,7 @@
                 Analyze
               </button>
             </div>
+            <p class="search-error-msg" id="search-error-msg" role="alert" aria-live="polite"></p>
           </div>
 
           <p class="example-label">Example wallet addresses &mdash; click to analyze:</p>
@@ -1517,6 +1538,7 @@ function scrollToTool() {
 
 function selectChip(el) {
   document.getElementById('wallet-input').value = el.dataset.wallet;
+  clearSearchError();
   analyzeWallet();
 }
 
@@ -1537,14 +1559,32 @@ function showScreen(name) {
 // ==========================================
 // ANALYZE
 // ==========================================
+function showSearchError(msg) {
+  const input = document.getElementById('wallet-input');
+  const err   = document.getElementById('search-error-msg');
+  err.textContent = msg;
+  input.classList.add('error');
+  // Remove just the error class (not the message) after 1.5s so border fades back
+  setTimeout(() => input.classList.remove('error'), 1500);
+}
+
+function clearSearchError() {
+  document.getElementById('search-error-msg').textContent = '';
+  document.getElementById('wallet-input').classList.remove('error');
+}
+
 function analyzeWallet() {
   const raw = document.getElementById('wallet-input').value.trim();
-  if (!raw) return;
-  const key = WALLET_LOOKUP[raw.toLowerCase()];
-  if (!key) {
-    alert('Wallet not found in demo dataset. Try one of the example addresses below.');
+  if (!raw) {
+    showSearchError('Enter a wallet address to begin, or select an example below.');
     return;
   }
+  const key = WALLET_LOOKUP[raw.toLowerCase()];
+  if (!key) {
+    showSearchError('Wallet not found in this demo dataset. Try one of the example addresses below, or search a full address exactly as shown.');
+    return;
+  }
+  clearSearchError();
 
   // Show skeleton immediately
   showScreen('loading');
