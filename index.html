@@ -1573,6 +1573,7 @@ let graphEdges = [];
 let hoveredNode = null;
 let flaggedCases = []; // array of { address, timestamp }
 let recentHistory = []; // array of wallet address strings, most recent first, max 3
+const liveWalletMeta = new Map(); // address -> { data, score, band }
 
 // ==========================================
 // RECENTLY VIEWED
@@ -1596,8 +1597,8 @@ function renderRecentChips() {
   }
   strip.classList.add('visible');
   container.innerHTML = recentHistory.map(addr => {
-    const data = WALLETS[addr];
-    const { color } = riskMeta(data.score);
+    const data = WALLETS[addr] || liveWalletMeta.get(addr.toLowerCase());
+    const { color } = riskMeta(data ? data.score : 0);
     const shortAddr = addr.slice(0, 8) + '\u2026' + addr.slice(-6);
     return `
       <div class="recent-chip" role="listitem" tabindex="0"
@@ -1670,7 +1671,7 @@ function renderMyCases() {
   }
   
   flaggedCases.forEach(c => {
-    const data = WALLETS[c.address];
+    const data = WALLETS[c.address] || liveWalletMeta.get(c.address.toLowerCase());
     if (!data) return;
     const meta = riskMeta(data.score);
     const topReason = data.flags[0] || 'Flagged for review';
@@ -1752,26 +1753,74 @@ function clearSearchError() {
   document.getElementById('wallet-input').classList.remove('error');
 }
 
-function analyzeWallet() {
+async function analyzeWallet() {
   const raw = document.getElementById('wallet-input').value.trim();
   if (!raw) {
     showSearchError('Enter a wallet address to begin, or select an example below.');
     return;
   }
-  const key = WALLET_LOOKUP[raw.toLowerCase()];
-  if (!key) {
-    showSearchError('Wallet not found in this demo dataset. Try one of the example addresses below, or search a full address exactly as shown.');
+  
+  if (!/^0x[0-9a-fA-F]{40}$/.test(raw)) {
+    showSearchError('Invalid Ethereum address format (must be 0x followed by 40 hex characters).');
     return;
   }
+  
   clearSearchError();
-  addToRecent(key);
+  
+  const lower = raw.toLowerCase();
+  const mockKey = WALLET_LOOKUP[lower];
 
   // Show skeleton immediately
   showScreen('loading');
 
-  // Populate all data fields while the skeleton is showing
+  let data;
+  let key = raw;
+  let liveGraph = null;
+
+  if (mockKey) {
+    // ── MOCK PATH ──
+    key = mockKey;
+    data = WALLETS[mockKey];
+    
+    // Simulate network delay for mock
+    await new Promise(r => setTimeout(r, 480 + Math.random() * 80));
+  } else {
+    // ── REAL DATA PATH ──
+    try {
+      const res = await fetch(`/api/wallet/${encodeURIComponent(raw)}/score`);
+      const json = await res.json();
+      
+      if (!res.ok) {
+        showScreen('search');
+        showSearchError(json.error || 'Failed to fetch wallet data.');
+        return;
+      }
+      
+      const s = json.scoring;
+      data = {
+        score: s.score,
+        band: s.band,
+        flags: s.flags,
+        txCount: json.totalTransfers + ' (in sample)',
+        volume: typeof json.balanceEth === 'number' ? json.balanceEth.toFixed(4) + ' ETH (Current)' : 'Unknown',
+        firstSeen: json.transfers && json.transfers.length > 0 ? new Date(json.transfers[json.transfers.length - 1].timestamp).toISOString().split('T')[0] + ' (in sample)' : 'N/A',
+        lastSeen: json.transfers && json.transfers.length > 0 ? new Date(json.transfers[0].timestamp).toISOString().split('T')[0] : 'N/A',
+        chain: 'Ethereum'
+      };
+      liveGraph = s.graph;
+      
+      // Save for recent chips and my cases
+      liveWalletMeta.set(lower, data);
+    } catch (err) {
+      showScreen('search');
+      showSearchError('Network error while analyzing wallet.');
+      return;
+    }
+  }
+
+  addToRecent(key);
   currentWallet = key;
-  const data = WALLETS[key];
+  
   const trunc = key.slice(0, 10) + '\u2026' + key.slice(-4);
   document.getElementById('result-wallet-display').textContent = trunc;
 
@@ -1782,21 +1831,23 @@ function analyzeWallet() {
   riskLabelEl.className = 'risk-label-badge ' + cls;
   riskLabelEl.textContent = label;
 
-  document.getElementById('flag-tags').innerHTML = data.flags.map(f => `
+  document.getElementById('flag-tags').innerHTML = data.flags.map(f => {
+    const text = typeof f === 'string' ? f : f.label;
+    return `
     <div class="flag-tag">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
         <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
       </svg>
-      ${f}
+      ${text}
     </div>
-  `).join('');
+  `}).join('');
 
   document.getElementById('wallet-meta-rows').innerHTML = `
     <div class="wallet-meta-row"><span class="wallet-meta-key">Chain</span><span class="wallet-meta-val">${data.chain}</span></div>
     <div class="wallet-meta-row"><span class="wallet-meta-key">Transactions</span><span class="wallet-meta-val">${data.txCount}</span></div>
     <div class="wallet-meta-row"><span class="wallet-meta-key">Volume</span><span class="wallet-meta-val">${data.volume}</span></div>
-    <div class="wallet-meta-row"><span class="wallet-meta-key">First seen</span><span class="wallet-meta-val">${data.firstSeen}</span></div>
+    <div class="wallet-meta-row" title="Showing most recent 100 transfers per direction"><span class="wallet-meta-key">First seen in sample</span><span class="wallet-meta-val">${data.firstSeen}</span></div>
     <div class="wallet-meta-row"><span class="wallet-meta-key">Last seen</span><span class="wallet-meta-val">${data.lastSeen}</span></div>
   `;
 
@@ -1810,20 +1861,16 @@ function analyzeWallet() {
   trigger.classList.remove('open');
   trigger.setAttribute('aria-expanded', 'false');
 
-  // After 500ms skeleton → reveal results with fade
-  const delay = 480 + Math.random() * 80; // 480-560ms
-  setTimeout(() => {
-    showScreen('results');
+  showScreen('results');
 
-    document.querySelectorAll('.anim-fade').forEach(el => {
-      el.style.animation = 'none';
-      void el.offsetHeight;
-      el.style.animation = '';
-    });
+  document.querySelectorAll('.anim-fade').forEach(el => {
+    el.style.animation = 'none';
+    void el.offsetHeight;
+    el.style.animation = '';
+  });
 
-    setTimeout(() => drawGraph(key), 150);
-    resetChat();
-  }, delay);
+  setTimeout(() => drawGraph(key, liveGraph), 150);
+  resetChat();
 }
 
 // ==========================================
@@ -1858,30 +1905,49 @@ function renderScoreBreakdown(data) {
     return;
   }
 
-  // Derive a plausible distribution — first flag carries most weight,
-  // subsequent flags taper. Normalise to 100.
-  const n = data.flags.length;
-  const rawWeights = data.flags.map((_, i) => Math.round(100 / (i + 1.4)));
-  const total = rawWeights.reduce((a, b) => a + b, 0);
-  const pcts = rawWeights.map(w => Math.round((w / total) * 100));
-  // Adjust rounding drift so they sum to exactly 100
-  const drift = 100 - pcts.reduce((a, b) => a + b, 0);
-  pcts[0] += drift;
+  const isMock = typeof data.flags[0] === 'string';
 
-  // Pick bar color from the wallet's overall risk level
-  const { color } = riskMeta(data.score);
-
-  container.innerHTML = data.flags.map((flag, i) => `
-    <div class="breakdown-row">
-      <div class="breakdown-label">
-        <span>${flag}</span>
-        <span class="breakdown-pct">${pcts[i]}%</span>
+  if (isMock) {
+    // Derive a plausible distribution — first flag carries most weight,
+    // subsequent flags taper. Normalise to 100.
+    const rawWeights = data.flags.map((_, i) => Math.round(100 / (i + 1.4)));
+    const total = rawWeights.reduce((a, b) => a + b, 0);
+    const pcts = rawWeights.map(w => Math.round((w / total) * 100));
+    // Adjust rounding drift so they sum to exactly 100
+    const drift = 100 - pcts.reduce((a, b) => a + b, 0);
+    pcts[0] += drift;
+  
+    // Pick bar color from the wallet's overall risk level
+    const { color } = riskMeta(data.score);
+  
+    container.innerHTML = data.flags.map((flag, i) => `
+      <div class="breakdown-row">
+        <div class="breakdown-label">
+          <span>${flag}</span>
+          <span class="breakdown-pct">${pcts[i]}%</span>
+        </div>
+        <div class="breakdown-track">
+          <div class="breakdown-bar" data-pct="${pcts[i]}" style="background:${color};width:0"></div>
+        </div>
       </div>
-      <div class="breakdown-track">
-        <div class="breakdown-bar" data-pct="${pcts[i]}" style="background:${color};width:0"></div>
+    `).join('');
+  } else {
+    // Real data path uses explanation text
+    container.innerHTML = data.flags.map((flag) => {
+      const barColor = flag.severity === 'high' ? getCssVar('--risk-red') : getCssVar('--risk-amber');
+      const barPct = flag.severity === 'high' ? '80' : '45';
+      return `
+      <div class="breakdown-row" style="margin-bottom:16px;">
+        <div class="breakdown-label" style="margin-bottom:2px;">
+          <span style="font-weight:600;color:var(--text-primary);">${flag.label}</span>
+        </div>
+        <div style="font-size:0.7rem;color:var(--text-secondary);line-height:1.4;margin-bottom:6px;">${flag.explanation}</div>
+        <div class="breakdown-track">
+          <div class="breakdown-bar" data-pct="${barPct}" style="background:${barColor};width:0"></div>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `}).join('');
+  }
 }
 
 // ==========================================
@@ -1910,7 +1976,7 @@ function updateGauge(score) {
 // ==========================================
 // TRANSACTION GRAPH
 // ==========================================
-function drawGraph(walletKey) {
+function drawGraph(walletKey, liveGraphData) {
   const canvas = document.getElementById('txGraph');
   const tooltip = document.getElementById('graphTooltip');
   if (!canvas) return;
@@ -1923,18 +1989,34 @@ function drawGraph(walletKey) {
   canvas.height = H * window.devicePixelRatio;
   ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
 
-  const gData = GRAPH_DATA[walletKey];
+  const gData = liveGraphData || GRAPH_DATA[walletKey];
   if (!gData) return;
 
   const cx = W / 2, cy = H / 2;
   const radius = Math.min(W, H) * 0.33;
   const nodeMap = {};
-  const peripheral = gData.nodes.filter(n => n.id !== 'center');
+  
+  // Normalize live graph data to match mock graph shape
+  const normNodes = gData.nodes.map(n => ({
+    id: n.id,
+    type: n.id === 'center' ? 'center' : 'node',
+    address: n.address,
+    score: n.score !== undefined ? n.score : (n.riskLevel === 'high' ? 85 : n.riskLevel === 'medium' ? 55 : 15)
+  }));
+  const normEdges = gData.edges.map(e => ({
+    from: e.from,
+    to: e.to,
+    amount: e.amount || e.valueUsd,
+    hash: e.hash || '0x???\u2026',
+    dir: e.dir
+  }));
 
-  gData.nodes.forEach(n => {
+  const peripheral = normNodes.filter(n => n.id !== 'center');
+
+  normNodes.forEach(n => {
     n.label = n.address.slice(0, 6) + '\u2026' + n.address.slice(-4);
     if (n.id === 'center') {
-      nodeMap[n.id] = { ...n, x: cx, y: cy };
+      nodeMap[n.id] = { ...n, x: cx, y: cy, type: 'center' };
     }
   });
   peripheral.forEach((n, i) => {
@@ -1943,15 +2025,13 @@ function drawGraph(walletKey) {
   });
 
   graphNodes = Object.values(nodeMap);
-  graphEdges = gData.edges.map(e => ({ ...e, fromNode: nodeMap[e.from], toNode: nodeMap[e.to] }));
+  graphEdges = normEdges.map(e => ({ ...e, fromNode: nodeMap[e.from], toNode: nodeMap[e.to] }));
   hoveredNode = null;
 
   canvas.onclick = (evt) => {
     if (hoveredNode && hoveredNode.id !== 'center') {
-      if (WALLETS[hoveredNode.address]) {
-        document.getElementById('wallet-input').value = hoveredNode.address;
-        analyzeWallet();
-      }
+      document.getElementById('wallet-input').value = hoveredNode.address;
+      analyzeWallet();
     }
   };
 
@@ -2245,8 +2325,8 @@ async function sendChat() {
       userQuestion:  text,
       walletLoaded:  !!currentWallet,
       walletAddress: currentWallet || '',
-      riskScore:     currentWallet ? WALLETS[currentWallet].score : null,
-      flaggedReasons: currentWallet ? WALLETS[currentWallet].flags : []
+      riskScore:     currentWallet ? (WALLETS[currentWallet] || liveWalletMeta.get(currentWallet.toLowerCase())).score : null,
+      flaggedReasons: currentWallet ? (WALLETS[currentWallet] || liveWalletMeta.get(currentWallet.toLowerCase())).flags.map(f => typeof f === 'string' ? f : f.label) : []
     };
 
     // 8-second timeout via AbortController
@@ -2308,8 +2388,8 @@ function getResponse(text) {
   }
 
   // Wallet IS loaded — wallet-aware responses
-  const data  = WALLETS[currentWallet];
-  const flags = data.flags;
+  const data  = WALLETS[currentWallet] || liveWalletMeta.get(currentWallet.toLowerCase());
+  const flags = data.flags.map(f => typeof f === 'string' ? f : f.label);
 
   if (lower.includes('why') || lower.includes('flagged') || lower.includes('flag')) {
     return `This wallet was flagged for: <strong>${flags[0]}</strong>${flags[1] ? ' and <strong>' + flags[1] + '</strong>' : ''}. These patterns are commonly associated with attempts to obscure fund origin or layer illicit transactions.`;
@@ -2346,12 +2426,12 @@ function getResponse(text) {
 // ==========================================
 function openReport() {
   if (!currentWallet) return;
-  const data = WALLETS[currentWallet];
+  const data = WALLETS[currentWallet] || liveWalletMeta.get(currentWallet.toLowerCase());
   const { label } = riskMeta(data.score);
   document.getElementById('rpt-wallet').textContent = currentWallet;
   document.getElementById('rpt-score').textContent = data.score + ' / 100';
   document.getElementById('rpt-level').textContent = label;
-  document.getElementById('rpt-flags').innerHTML = data.flags.map(f => '<li>' + f + '</li>').join('');
+  document.getElementById('rpt-flags').innerHTML = data.flags.map(f => '<li>' + (typeof f === 'string' ? f : f.label) + '</li>').join('');
   document.getElementById('rpt-timestamp').textContent = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST';
   document.getElementById('reportModal').classList.add('open');
 }
@@ -2360,7 +2440,7 @@ function closeReport() {
 }
 function downloadPDF() {
   if (!currentWallet) return;
-  const data = WALLETS[currentWallet];
+  const data = WALLETS[currentWallet] || liveWalletMeta.get(currentWallet.toLowerCase());
   const { label } = riskMeta(data.score);
   const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST';
   const shortAddr = currentWallet.slice(0, 10) + '\u2026' + currentWallet.slice(-6);
@@ -2443,7 +2523,7 @@ function downloadPDF() {
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(30, 30, 30);
   data.flags.forEach((flag, i) => {
-    doc.text('\u2022  ' + flag, MARGIN + 2, y);
+    doc.text('\u2022  ' + (typeof flag === 'string' ? flag : flag.label), MARGIN + 2, y);
     y += 7;
   });
   y += 4;
@@ -2613,5 +2693,6 @@ document.addEventListener('keydown', e => {
 })();
 
 </script>
+
 </body>
 </html>

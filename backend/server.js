@@ -88,8 +88,179 @@ Flagged reasons: ${flaggedReasons.join(', ')}`
   }
 });
 
+// ── In-memory cache for Alchemy wallet responses (TTL: 60 s) ─────────────────
+const walletCache = new Map(); // address → { data, expiresAt }
+
+// ── GET /api/wallet/:address ──────────────────────────────────────────────────
+app.get('/api/wallet/:address', async (req, res) => {
+  const { address } = req.params;
+
+  // Validate Ethereum address: 0x + 40 hex chars
+  if (!/^0x[0-9a-fA-F]{40}$/.test(address)) {
+    return res.status(400).json({
+      error: 'Invalid Ethereum address — must be 0x followed by exactly 40 hexadecimal characters.'
+    });
+  }
+
+  const alchemyKey = process.env.ALCHEMY_API_KEY;
+  if (!alchemyKey) {
+    return res.status(503).json({ error: 'ALCHEMY_API_KEY not configured on server.' });
+  }
+
+  // Serve from cache if still fresh
+  const cached = walletCache.get(address);
+  if (cached && Date.now() < cached.expiresAt) {
+    return res.json({ ...cached.data, _cached: true });
+  }
+
+  const alchemyUrl = `https://eth-mainnet.g.alchemy.com/v2/${alchemyKey}`;
+
+  // Helper — POST a single JSON-RPC call to Alchemy
+  async function alchemyRpc(body) {
+    const r = await fetch(alchemyUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) {
+      const text = await r.text();
+      throw new Error(`Alchemy HTTP ${r.status}: ${text}`);
+    }
+    const json = await r.json();
+    if (json.error) {
+      throw new Error(`Alchemy RPC error ${json.error.code}: ${json.error.message}`);
+    }
+    return json.result;
+  }
+
+  try {
+    // Fire all three requests in parallel
+    const [outResult, inResult, balanceHex] = await Promise.all([
+      // Outgoing transfers (fromAddress)
+      alchemyRpc({
+        jsonrpc: '2.0', id: 1,
+        method: 'alchemy_getAssetTransfers',
+        params: [{
+          fromBlock: '0x0',
+          fromAddress: address,
+          category: ['external', 'erc20'],
+          withMetadata: true,
+          excludeZeroValue: true,
+          maxCount: '0x64',
+          order: 'desc'
+        }]
+      }),
+      // Incoming transfers (toAddress)
+      alchemyRpc({
+        jsonrpc: '2.0', id: 2,
+        method: 'alchemy_getAssetTransfers',
+        params: [{
+          fromBlock: '0x0',
+          toAddress: address,
+          category: ['external', 'erc20'],
+          withMetadata: true,
+          excludeZeroValue: true,
+          maxCount: '0x64',
+          order: 'desc'
+        }]
+      }),
+      // ETH balance
+      alchemyRpc({
+        jsonrpc: '2.0', id: 3,
+        method: 'eth_getBalance',
+        params: [address, 'latest']
+      })
+    ]);
+
+    // Convert Wei hex to ETH (BigInt to handle very large numbers)
+    const balanceWei = BigInt(balanceHex);
+    const balanceEth = Number(balanceWei) / 1e18;
+
+    // Merge transfers, dedupe by hash+asset, normalise shape
+    const seen = new Set();
+    const transfers = [];
+
+    for (const tx of [...(outResult.transfers || []), ...(inResult.transfers || [])]) {
+      const key = `${tx.hash}-${tx.asset || ''}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+
+      transfers.push({
+        hash:      tx.hash,
+        from:      tx.from,
+        to:        tx.to,
+        value:     tx.value,          // numeric, already in token units
+        asset:     tx.asset || 'ETH', // token symbol
+        category:  tx.category,       // 'external' | 'erc20'
+        timestamp: tx.metadata?.blockTimestamp || null
+      });
+    }
+
+    // Sort newest first (ISO timestamps sort lexicographically)
+    transfers.sort((a, b) => {
+      if (!a.timestamp) return 1;
+      if (!b.timestamp) return -1;
+      return b.timestamp.localeCompare(a.timestamp);
+    });
+
+    const payload = {
+      address,
+      balanceEth,
+      totalTransfers: transfers.length,
+      transfers
+    };
+
+    // Store in cache for 60 seconds
+    walletCache.set(address, { data: payload, expiresAt: Date.now() + 60_000 });
+
+    return res.json(payload);
+
+  } catch (err) {
+    console.error('[/api/wallet] Alchemy error:', err.message);
+    return res.status(502).json({ error: `Alchemy request failed: ${err.message}` });
+  }
+});
+
+// ── In-memory cache for Scoring responses (TTL: 60 s) ───────────────────────
+const scoringCache = new Map(); // address → { data, expiresAt }
+const { scoreWallet } = require('./riskScoring');
+
+// ── GET /api/wallet/:address/score ────────────────────────────────────────────
+app.get('/api/wallet/:address/score', async (req, res) => {
+  const { address } = req.params;
+
+  // Serve from cache if still fresh
+  const cached = scoringCache.get(address);
+  if (cached && Date.now() < cached.expiresAt) {
+    return res.json({ ...cached.data, _cached: true });
+  }
+
+  try {
+    // Call our own raw wallet endpoint to get the data (re-uses its own cache)
+    const rawRes = await fetch(`http://localhost:${PORT}/api/wallet/${encodeURIComponent(address)}`);
+    const rawData = await rawRes.json();
+
+    if (!rawRes.ok) {
+      return res.status(rawRes.status).json(rawData);
+    }
+
+    // Pass the raw Alchemy data through our scoring module
+    const scoring = scoreWallet(rawData);
+    const payload = { ...rawData, scoring };
+
+    // Store in cache for 60 seconds
+    scoringCache.set(address, { data: payload, expiresAt: Date.now() + 60_000 });
+
+    return res.json(payload);
+  } catch (err) {
+    console.error('[/api/wallet/score] Error:', err.message);
+    return res.status(502).json({ error: `Scoring failed: ${err.message}`, scoringError: true });
+  }
+});
+
 // ── Start ─────────────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`FlowTrace backend running at http://localhost:${PORT}`);
-  console.log(`API key configured: ${process.env.OPENROUTER_API_KEY ? 'YES' : 'NO — add your key to backend/.env'}`);
+  console.log(`OpenRouter API key: ${process.env.OPENROUTER_API_KEY ? 'YES' : 'NO — add to backend/.env'}`);
+  console.log(`Alchemy API key:    ${process.env.ALCHEMY_API_KEY    ? 'YES' : 'NO — add to backend/.env'}`);
 });
