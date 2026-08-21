@@ -1954,8 +1954,8 @@ function renderScoreBreakdown(data) {
 // GAUGE
 // ==========================================
 function riskMeta(score) {
-  if (score >= 75) return { cls: 'risk-high', label: 'High Risk', color: getCssVar('--risk-red') };
-  if (score >= 50) return { cls: 'risk-medium', label: 'Moderate Risk', color: getCssVar('--risk-amber') };
+  if (score >= 67) return { cls: 'risk-high', label: 'High Risk', color: getCssVar('--risk-red') };
+  if (score >= 34) return { cls: 'risk-medium', label: 'Moderate Risk', color: getCssVar('--risk-amber') };
   return { cls: 'risk-low', label: 'Low Risk', color: getCssVar('--risk-green') };
 }
 
@@ -2133,14 +2133,15 @@ function drawGraph(walletKey, liveGraphData) {
       const dr = isHovered ? r + 4 : r;
 
       let fill, stroke, glowColor;
-      
-      if (n.score >= 75) {
-         fill = `rgba(${getCssVar('--risk-red-rgb')}, 0.12)`; stroke = getCssVar('--risk-red'); glowColor = `rgba(${getCssVar('--risk-red-rgb')}, 0.25)`;
-      } else if (n.score >= 50) {
-         fill = `rgba(${getCssVar('--risk-amber-rgb')}, 0.12)`; stroke = getCssVar('--risk-amber'); glowColor = `rgba(${getCssVar('--risk-amber-rgb')}, 0.25)`;
-      } else {
-         fill = `rgba(${getCssVar('--risk-green-rgb')}, 0.12)`; stroke = getCssVar('--risk-green'); glowColor = `rgba(${getCssVar('--risk-green-rgb')}, 0.25)`;
-      }
+      const { cls: _cls, color: _color } = riskMeta(n.score);
+      const rgb = _color === getCssVar('--risk-red')
+        ? getCssVar('--risk-red-rgb')
+        : _color === getCssVar('--risk-amber')
+        ? getCssVar('--risk-amber-rgb')
+        : getCssVar('--risk-green-rgb');
+      fill = `rgba(${rgb}, 0.12)`;
+      stroke = _color;
+      glowColor = `rgba(${rgb}, 0.25)`;
 
       if (isHovered) {
         ctx.beginPath();
@@ -2169,7 +2170,7 @@ function drawGraph(walletKey, liveGraphData) {
       if (n.id === 'center') {
         ctx.font = 'bold 12px Inter, sans-serif';
         ctx.fillText('\uD83D\uDD0D', n.x, n.y);
-      } else if (n.score >= 75) {
+      } else if (n.score >= 67) {
         ctx.font = '13px Inter, sans-serif';
         ctx.fillText('\u26A0', n.x, n.y);
       } else {
@@ -2416,7 +2417,8 @@ function getResponse(text) {
     return '<strong>Circular transactions</strong> occur when funds are sent from a wallet through a chain of other wallets and eventually return to the originating wallet \u2014 a layering technique used to generate the appearance of legitimate activity.';
   }
   if (lower.includes('score') || lower.includes('risk') || lower.includes('number')) {
-    return `This wallet has a risk score of <strong>${data.score}/100</strong> \u2014 ${data.score >= 75 ? 'High Risk' : data.score >= 50 ? 'Moderate Risk' : 'Low Risk'}. The score is based on ${flags.length} flagged pattern${flags.length > 1 ? 's' : ''}: ${flags.join(' and ')}.`;
+    const { label } = riskMeta(data.score);
+    return `This wallet has a risk score of <strong>${data.score}/100</strong> \u2014 <strong>${label}</strong>. The score is based on ${flags.length} flagged pattern${flags.length > 1 ? 's' : ''}: ${flags.join(' and ')}.`;
   }
   return 'I can explain this wallet\u2019s risk score, flagged patterns, or suggest next steps \u2014 try asking about any of those, or ask what a specific term means.';
 }
@@ -2493,8 +2495,8 @@ function downloadPDF() {
   y += 8;
 
   // ---- RISK SCORE ROW ----
-  // Score box
-  const scoreColor = data.score >= 75 ? [220, 38, 38] : data.score >= 50 ? [217, 119, 6] : [22, 163, 74];
+  // Score box — RGB triplets match the risk-* CSS vars
+  const scoreColor = data.score >= 67 ? [220, 38, 38] : data.score >= 34 ? [217, 119, 6] : [22, 163, 74];
   doc.setFillColor(...scoreColor);
   doc.roundedRect(MARGIN, y - 4, 32, 14, 2, 2, 'F');
   doc.setFontSize(16);
