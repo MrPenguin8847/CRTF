@@ -5,12 +5,21 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "node --watch server.js"
+    "dev": "node --watch server.js",
+    "test:stage2": "node tests/stage_2_acceptance_runner.js",
+    "test:stage2:organization-selection": "node tests/stage_2_acceptance_runner.js organization-selection",
+    "test:stage3": "node tests/stage_3_acceptance_runner.js",
+    "test:stage4:contract": "node tests/stage_4_frontend_contract_runner.js",
+    "test:stage5-6:local": "node tests/stage_5_6_acceptance_runner.js",
+    "test:stage5:real": "node tests/stage_5_real_score_runner.js",
+    "test:stage6:live": "node tests/stage_6_live_feed_runner.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.57.4",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
+    "express-rate-limit": "^8.1.0",
     "node-fetch": "^2.7.0"
   }
 }

@@ -103,6 +103,10 @@
       transition: background 0.15s;
     }
     .topnav-cta:hover { background: var(--accent-hover); }
+    .account-state { display:flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--text-secondary); }
+    .account-org { max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-primary); }
+    .account-link { background:none; color:var(--accent-light); font-size:0.78rem; padding:4px; }
+    .account-link:hover { color:var(--text-primary); }
 
     
     .theme-toggle {
@@ -351,6 +355,13 @@
       border-radius: 4px; transition: color 0.2s; z-index: 2; margin-left: auto; display: flex;
     }
     .case-unflag:hover { color: var(--risk-red); background: rgba(var(--text-primary-rgb), 0.05); }
+    .case-actions { display:flex; gap:6px; align-items:center; position:relative; z-index:2; }
+    .case-action { background:transparent; border:1px solid var(--border); color:var(--text-secondary); border-radius:4px; font-size:0.7rem; padding:4px 7px; }
+    .case-action:hover { border-color:var(--border-hover); color:var(--text-primary); }
+    .case-action.close:hover { border-color:var(--risk-red); color:var(--risk-red); }
+    .case-status { font-size:0.68rem; font-weight:600; text-transform:uppercase; letter-spacing:.06em; color:var(--text-tertiary); }
+    .case-status.dismissed { color:var(--risk-amber); }
+    .case-status.closed { color:var(--risk-green); }
     .case-reason { font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
     .case-meta { font-size: 0.7rem; color: var(--text-tertiary); margin-top: auto; padding-top: 12px; border-top: 1px solid var(--border); }
     .empty-cases { text-align: center; padding: 80px 20px; color: var(--text-secondary); font-size: 0.95rem; grid-column: 1 / -1; }
@@ -363,6 +374,20 @@
     }
     .flag-case-btn:hover { border-color: var(--accent-mid); color: var(--accent-light); }
     .flag-case-btn.active { background: rgba(var(--accent-rgb), 0.1); border-color: var(--accent-mid); color: var(--accent-light); }
+    .case-snapshot-notice { margin:0 0 16px; padding:10px 12px; border:1px solid rgba(var(--accent-rgb),.3); background:rgba(var(--accent-rgb),.08); color:var(--text-secondary); border-radius:6px; font-size:.78rem; display:flex; align-items:center; justify-content:space-between; gap:10px; }
+    .case-snapshot-notice.hidden { display:none; }
+    .case-snapshot-notice button { background:transparent; color:var(--accent-light); border:1px solid rgba(var(--accent-rgb),.45); border-radius:4px; padding:4px 8px; font-size:.72rem; white-space:nowrap; }
+    .auth-modal { width:min(440px, calc(100vw - 32px)); }
+    .auth-copy { color:var(--text-secondary); font-size:.88rem; margin:0 0 18px; }
+    .auth-form { display:grid; gap:12px; }
+    .auth-form label { display:grid; gap:5px; color:var(--text-secondary); font-size:.78rem; }
+    /* The form-label layout rule above otherwise overrides the HTML hidden
+       attribute, which exposed an empty organization field before login. */
+    .auth-form [hidden] { display:none !important; }
+    .auth-form input, .auth-form select { background:var(--surface-alt); border:1px solid var(--border); border-radius:6px; color:var(--text-primary); padding:10px; }
+    .auth-error { min-height:1.2em; color:var(--risk-red); font-size:.78rem; margin:8px 0 0; }
+    .auth-submit { background:var(--accent); color:#fff; border-radius:6px; padding:10px 14px; font-weight:600; }
+    .auth-submit:hover { background:var(--accent-hover); }
 
     /* SCORE BREAKDOWN */
     .score-breakdown-trigger {
@@ -925,11 +950,12 @@
       FlowTrace
     </div>
         <div class="topnav-actions" style="display:flex; align-items:center; gap:16px;">
+          <div class="account-state" id="accountState" aria-live="polite"></div>
       <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode">
         <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </button>
-      <button class="topnav-cta" onclick="scrollToTool()" id="nav-launch-btn">Launch demo</button>
+          <button class="topnav-cta" onclick="scrollToTool()" id="nav-launch-btn">Launch demo</button>
     </div>
   </div>
 </nav>
@@ -1086,7 +1112,7 @@
             My Cases
             <span id="casesCountBadge" class="cases-badge hidden">0</span>
           </button>
-          <div class="chrome-badge">Demo Mode</div>
+          <div class="chrome-badge" id="modeBadge">Loading…</div>
         </div>
       </div>
 
@@ -1219,6 +1245,11 @@
             <div style="width:90px"></div>
           </div>
 
+          <div id="caseSnapshotNotice" class="case-snapshot-notice hidden">
+            <span>Viewing the immutable flag-time snapshot for this case.</span>
+            <button type="button" onclick="runFreshCaseAnalysis()">Run fresh current analysis</button>
+          </div>
+
           <div class="results-body">
             <!-- LEFT PANEL -->
             <div class="results-left">
@@ -1232,7 +1263,7 @@
                   <text x="90" y="106" text-anchor="middle" class="gauge-sub-text">out of 100</text>
                 </svg>
                 <div id="riskLabel" class="risk-label-badge risk-high">High Risk</div>
-                <button id="flagCaseBtn" class="flag-case-btn" onclick="toggleFlagCurrentWallet()" aria-label="Flag for case">
+                <button id="flagCaseBtn" class="flag-case-btn" onclick="flagCurrentWallet()" aria-label="Flag for case">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
                   <span>Flag for case</span>
                 </button>
@@ -1431,6 +1462,31 @@
   </div>
 </div>
 
+<!-- AUTHENTICATION / INVITATION ACCESS MODAL -->
+<div class="modal-overlay" id="authModal" role="dialog" aria-modal="true" aria-label="Account access">
+  <div class="modal auth-modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="authTitle">Sign in</div>
+        <div class="modal-subtitle" id="authSubtitle">FlowTrace access is invitation-only.</div>
+      </div>
+      <button class="modal-close" onclick="closeAuthModal()" aria-label="Close account access"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <p class="auth-copy" id="authCopy">Use the account created from your organization invitation. Public registration is not available.</p>
+      <form class="auth-form" id="authForm" onsubmit="submitAuth(event)">
+        <label>Email<input id="authEmail" type="email" autocomplete="email" required></label>
+        <label>Password<input id="authPassword" type="password" autocomplete="current-password" required minlength="8"></label>
+        <label id="organizationSelectWrap" hidden>Active organization<select id="organizationSelect" onchange="selectOrganization(this.value)"></select></label>
+        <button class="auth-submit" id="authSubmit" type="submit">Sign in</button>
+        <button class="auth-submit" id="organizationSubmit" type="button" onclick="confirmOrganizationSelection()" hidden>Continue with organization</button>
+      </form>
+      <p class="auth-error" id="authError" role="alert"></p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ==========================================
 // MOCK DATA
@@ -1571,9 +1627,219 @@ let animationFrameId = null;
 let graphNodes = [];
 let graphEdges = [];
 let hoveredNode = null;
-let flaggedCases = []; // array of { address, timestamp }
+let flaggedCases = []; // database-backed case rows for the active organization
 let recentHistory = []; // array of wallet address strings, most recent first, max 3
 const liveWalletMeta = new Map(); // address -> { data, score, band }
+let currentCase = null;
+let currentViewIsSnapshot = false;
+
+// ==========================================
+// AUTHENTICATION AND ORGANIZATION CONTEXT
+// ==========================================
+const appAuth = { config: null, client: null, session: null, profile: null, activeOrganizationId: sessionStorage.getItem('flowtrace.activeOrganizationId') || null, inviteMode: false };
+
+function currentAccessToken() { return appAuth.session?.access_token || null; }
+function isProductionMode() { return appAuth.config?.mode === 'production'; }
+
+async function apiFetch(path, options = {}) {
+  const headers = new Headers(options.headers || {});
+  const token = currentAccessToken();
+  if (token) headers.set('Authorization', `Bearer ${token}`);
+  if (appAuth.activeOrganizationId) headers.set('X-FlowTrace-Organization-Id', appAuth.activeOrganizationId);
+  return fetch(path, { ...options, headers });
+}
+
+function renderAccountState() {
+  const root = document.getElementById('accountState');
+  root.replaceChildren();
+  const modeBadge = document.getElementById('modeBadge');
+  modeBadge.textContent = isProductionMode() ? 'Production' : 'Demo Mode';
+  if (!appAuth.session || !appAuth.profile) {
+    const login = document.createElement('button');
+    login.className = 'account-link'; login.textContent = 'Sign in'; login.onclick = () => openAuthModal();
+    root.append(login);
+    return;
+  }
+  const org = document.createElement('span');
+  org.className = 'account-org';
+  const id = appAuth.profile.activeOrganization?.organizationId;
+  org.textContent = id ? `${appAuth.profile.user.email} · Org ${id.slice(0, 8)}` : 'Choose organization';
+  const membership = appAuth.profile.memberships?.find(item => item.organizationId === id);
+  if (id) org.textContent = `${appAuth.profile.user.email} · ${membership?.organizationName || `Org ${id.slice(0, 8)}`}`;
+  org.title = id || 'Organization selection required';
+  const logoutButton = document.createElement('button');
+  logoutButton.className = 'account-link'; logoutButton.textContent = 'Sign out'; logoutButton.onclick = logout;
+  root.append(org, logoutButton);
+}
+
+function resetAccountUi() {
+  appAuth.profile = null;
+  appAuth.activeOrganizationId = null;
+  sessionStorage.removeItem('flowtrace.activeOrganizationId');
+  flaggedCases = [];
+  currentCase = null;
+  updateCasesBadge();
+  renderMyCases();
+  renderAccountState();
+}
+
+async function restoreSession() {
+  if (!appAuth.client) return;
+  const { data: { session } } = await appAuth.client.auth.getSession();
+  appAuth.session = session;
+  if (!session) { resetAccountUi(); return; }
+  await loadProfileAndCases();
+}
+
+async function loadProfileAndCases() {
+  const profileResponse = await apiFetch('/api/auth/me');
+  if (profileResponse.status === 401) { resetAccountUi(); return; }
+  if (!profileResponse.ok) { renderAccountState(); return; }
+  appAuth.profile = await profileResponse.json();
+  const memberships = Array.isArray(appAuth.profile.memberships) ? appAuth.profile.memberships : [];
+  if (appAuth.profile.organizationSelectionRequired) {
+    if (memberships.length < 2) {
+      appAuth.profile = null;
+      renderAccountState();
+      document.getElementById('authError').textContent = 'Your organization memberships could not be loaded. Please sign in again.';
+      return;
+    }
+    openAuthModal('organization', memberships);
+    renderAccountState();
+    return;
+  }
+  appAuth.activeOrganizationId = appAuth.profile.activeOrganization?.organizationId || null;
+  if (appAuth.activeOrganizationId) sessionStorage.setItem('flowtrace.activeOrganizationId', appAuth.activeOrganizationId);
+  renderAccountState();
+  await loadCases();
+}
+
+function populateOrganizationSelect(memberships) {
+  const select = document.getElementById('organizationSelect');
+  select.replaceChildren();
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Choose an organization';
+  placeholder.disabled = true;
+  placeholder.selected = true;
+  select.append(placeholder);
+  memberships.forEach(membership => {
+    const option = document.createElement('option');
+    option.value = membership.organizationId;
+    option.textContent = `${membership.organizationName || `Organization ${membership.organizationId.slice(0, 8)}`} · ${membership.role}`;
+    select.append(option);
+  });
+}
+
+async function selectOrganization(organizationId) {
+  if (!organizationId) return;
+  appAuth.activeOrganizationId = organizationId;
+  sessionStorage.setItem('flowtrace.activeOrganizationId', organizationId);
+  closeAuthModal();
+  await loadProfileAndCases();
+}
+
+function confirmOrganizationSelection() {
+  const organizationId = document.getElementById('organizationSelect').value;
+  if (!organizationId) {
+    document.getElementById('authError').textContent = 'Choose an organization to continue.';
+    return;
+  }
+  selectOrganization(organizationId);
+}
+
+function openAuthModal(mode = 'login', memberships = []) {
+  const modal = document.getElementById('authModal');
+  const title = document.getElementById('authTitle');
+  const subtitle = document.getElementById('authSubtitle');
+  const copy = document.getElementById('authCopy');
+  const submit = document.getElementById('authSubmit');
+  const email = document.getElementById('authEmail');
+  const password = document.getElementById('authPassword');
+  const selectWrap = document.getElementById('organizationSelectWrap');
+  const organizationSubmit = document.getElementById('organizationSubmit');
+  const select = document.getElementById('organizationSelect');
+  document.getElementById('authError').textContent = '';
+  selectWrap.hidden = mode !== 'organization';
+  organizationSubmit.hidden = mode !== 'organization';
+  if (mode !== 'organization') select.replaceChildren();
+  appAuth.inviteMode = mode === 'invite';
+  if (mode === 'organization') {
+    populateOrganizationSelect(memberships);
+    title.textContent = 'Choose an organization'; subtitle.textContent = 'Select the organization context for this session.';
+    copy.textContent = 'Cases and account data are isolated by organization.'; submit.hidden = true; email.closest('label').hidden = true; password.closest('label').hidden = true;
+  } else if (mode === 'invite') {
+    title.textContent = 'Activate your invitation'; subtitle.textContent = 'Set a password to activate your invited FlowTrace account.';
+    copy.textContent = 'Access is invitation-only. This link does not create a public account.'; submit.hidden = false; submit.textContent = 'Activate account';
+    email.value = appAuth.session?.user?.email || ''; email.closest('label').hidden = false; email.disabled = true;
+    password.value = ''; password.autocomplete = 'new-password'; password.closest('label').hidden = false;
+  } else {
+    title.textContent = 'Sign in'; subtitle.textContent = 'FlowTrace access is invitation-only.';
+    copy.textContent = 'Use the account created from your organization invitation. Public registration is not available.'; submit.hidden = false; submit.textContent = 'Sign in';
+    email.disabled = false; email.closest('label').hidden = false; password.autocomplete = 'current-password'; password.closest('label').hidden = false;
+  }
+  modal.classList.add('open');
+}
+
+function closeAuthModal() { document.getElementById('authModal').classList.remove('open'); }
+
+async function submitAuth(event) {
+  event.preventDefault();
+  const error = document.getElementById('authError'); error.textContent = '';
+  const submit = document.getElementById('authSubmit'); submit.disabled = true;
+  try {
+    if (appAuth.inviteMode) {
+      const { error: updateError } = await appAuth.client.auth.updateUser({ password: document.getElementById('authPassword').value });
+      if (updateError) throw updateError;
+      const claim = await apiFetch('/api/auth/claim-invitations', { method: 'POST' });
+      if (!claim.ok) throw new Error((await claim.json()).error || 'Invitation activation failed.');
+    } else {
+      const { data, error: signInError } = await appAuth.client.auth.signInWithPassword({ email: document.getElementById('authEmail').value.trim(), password: document.getElementById('authPassword').value });
+      if (signInError) throw signInError;
+      appAuth.session = data.session;
+    }
+    await restoreSession();
+    if (!appAuth.profile?.organizationSelectionRequired) closeAuthModal();
+  } catch (authError) {
+    error.textContent = authError.message || 'Unable to sign in.';
+  } finally { submit.disabled = false; }
+}
+
+async function logout() {
+  if (appAuth.client) await appAuth.client.auth.signOut();
+  appAuth.session = null;
+  resetAccountUi();
+  goBack();
+}
+
+async function initializeAuth() {
+  try {
+    const configResponse = await fetch('/api/config');
+    if (!configResponse.ok) throw new Error('Unable to load application configuration.');
+    appAuth.config = await configResponse.json();
+    if (!window.supabase) throw new Error('The authentication library did not load.');
+    appAuth.client = window.supabase.createClient(appAuth.config.supabaseUrl, appAuth.config.supabaseAnonKey, { auth: { detectSessionInUrl: true } });
+    const params = new URLSearchParams(location.search);
+    const hashParams = new URLSearchParams(location.hash.replace(/^#/, ''));
+    if (params.get('code')) await appAuth.client.auth.exchangeCodeForSession(params.get('code'));
+    if (params.get('token_hash') && params.get('type') === 'invite') {
+      const { error } = await appAuth.client.auth.verifyOtp({ token_hash: params.get('token_hash'), type: 'invite' });
+      if (error) throw error;
+      history.replaceState({}, '', location.pathname);
+      await restoreSession(); openAuthModal('invite');
+    } else {
+      await restoreSession();
+      if (hashParams.get('type') === 'invite' && appAuth.session) {
+        history.replaceState({}, '', location.pathname);
+        openAuthModal('invite');
+      }
+    }
+    appAuth.client.auth.onAuthStateChange((_event, session) => { appAuth.session = session; setTimeout(() => restoreSession(), 0); });
+  } catch (error) {
+    document.getElementById('authError').textContent = error.message || 'Account access is unavailable.';
+    renderAccountState();
+  }
+}
 
 // ==========================================
 // RECENTLY VIEWED
@@ -1622,13 +1888,15 @@ function selectRecentChip(address) {
 // ==========================================
 function updateFlagButton() {
   const btn = document.getElementById('flagCaseBtn');
-  const isFlagged = flaggedCases.some(c => c.address === currentWallet);
-  if (isFlagged) {
+  const address = currentWallet?.toLowerCase();
+  const savedCase = flaggedCases.find(c => c.wallet_address === address && c.status === 'open');
+  btn.disabled = false;
+  if (savedCase) {
     btn.classList.add('active');
-    btn.querySelector('span').textContent = 'Flagged for case';
+    btn.querySelector('span').textContent = 'Open case saved';
   } else {
     btn.classList.remove('active');
-    btn.querySelector('span').textContent = 'Flag for case';
+    btn.querySelector('span').textContent = appAuth.session ? 'Flag for case' : 'Sign in to flag';
   }
 }
 
@@ -1642,23 +1910,55 @@ function updateCasesBadge() {
   }
 }
 
-function toggleFlagCurrentWallet() {
-  if (!currentWallet) return;
-  const idx = flaggedCases.findIndex(c => c.address === currentWallet);
-  if (idx > -1) {
-    flaggedCases.splice(idx, 1);
-  } else {
-    flaggedCases.push({ address: currentWallet, timestamp: new Date() });
-  }
-  updateFlagButton();
+async function loadCases() {
+  if (!appAuth.session || !appAuth.activeOrganizationId) { flaggedCases = []; updateCasesBadge(); return; }
+  const response = await apiFetch('/api/cases');
+  if (!response.ok) { flaggedCases = []; updateCasesBadge(); return; }
+  flaggedCases = (await response.json()).cases || [];
   updateCasesBadge();
+  if (document.getElementById('screen-cases').classList.contains('active')) renderMyCases();
 }
 
-function unflagCase(evt, address) {
-  evt.stopPropagation();
-  flaggedCases = flaggedCases.filter(c => c.address !== address);
-  updateCasesBadge();
+function snapshotToDisplayData(savedCase) {
+  const snapshot = savedCase.wallet_snapshot || {};
+  const scoring = snapshot.scoring || {};
+  const transfers = snapshot.transfers || [];
+  const lastTransferTimestamp = transfers.find(t => t.timestamp)?.timestamp;
+  return {
+    score: savedCase.risk_score,
+    band: savedCase.risk_band,
+    flags: savedCase.risk_flags || scoring.flags || [],
+    txCount: `${snapshot.totalTransfers ?? transfers.length} (flag-time snapshot)`,
+    volume: typeof snapshot.balanceEth === 'number' ? `${snapshot.balanceEth.toFixed(4)} ETH (flag-time balance)` : 'Unavailable in snapshot',
+    firstSeen: transfers.length ? new Date(transfers[transfers.length - 1].timestamp).toISOString().split('T')[0] : 'Unavailable in snapshot',
+    lastSeen: lastTransferTimestamp ? new Date(lastTransferTimestamp).toISOString().split('T')[0] : 'Unavailable in snapshot',
+    chain: savedCase.chain || 'ethereum-mainnet',
+    graph: scoring.graph || null,
+  };
+}
+
+async function flagCurrentWallet() {
+  if (!currentWallet) return;
+  if (!appAuth.session) { openAuthModal(); return; }
+  const response = await apiFetch('/api/cases', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ walletAddress: currentWallet }),
+  });
+  if (response.status === 401 || response.status === 403) { openAuthModal(); return; }
+  if (!response.ok && response.status !== 409) { showSearchError((await response.json()).error || 'Unable to create case.'); return; }
+  await loadCases();
+  updateFlagButton();
+}
+
+async function transitionCase(event, caseId, status) {
+  event.stopPropagation();
+  const response = await apiFetch(`/api/cases/${encodeURIComponent(caseId)}`, {
+    method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }),
+  });
+  if (!response.ok) { showSearchError((await response.json()).error || 'Unable to update case.'); return; }
+  await loadCases();
   renderMyCases();
+  updateFlagButton();
 }
 
 function renderMyCases() {
@@ -1671,42 +1971,52 @@ function renderMyCases() {
   }
   
   flaggedCases.forEach(c => {
-    const data = WALLETS[c.address] || liveWalletMeta.get(c.address.toLowerCase());
-    if (!data) return;
+    const data = snapshotToDisplayData(c);
     const meta = riskMeta(data.score);
-    const topReason = data.flags[0] || 'Flagged for review';
-    const timeStr = c.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const dateStr = c.timestamp.toLocaleDateString();
+    const topReason = typeof data.flags[0] === 'string' ? data.flags[0] : data.flags[0]?.label || 'Flagged for review';
+    const flaggedAt = new Date(c.flagged_at);
+    const statusActions = c.status === 'open'
+      ? `<div class="case-actions"><button class="case-action" onclick="transitionCase(event, '${c.id}', 'dismissed')">Dismiss</button><button class="case-action close" onclick="transitionCase(event, '${c.id}', 'closed')">Close</button></div>`
+      : `<span class="case-status ${c.status}">${c.status}</span>`;
     
     grid.innerHTML += `
-      <div class="case-card" onclick="goToCase('${c.address}')">
+      <div class="case-card" onclick="openCaseDetail('${c.id}')">
         <div class="case-card-header">
           <div>
-            <div class="case-address">${c.address.slice(0, 8)}...${c.address.slice(-6)}</div>
+            <div class="case-address">${c.wallet_address.slice(0, 8)}...${c.wallet_address.slice(-6)}</div>
             <div class="risk-label-badge ${meta.cls}" style="font-size:0.7rem;padding:2px 6px;">${meta.label}</div>
           </div>
-          <button class="case-unflag" onclick="unflagCase(event, '${c.address}')" aria-label="Unflag wallet">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-          </button>
+          ${statusActions}
         </div>
         <div class="case-reason">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
           ${topReason}
         </div>
-        <div class="case-meta">Flagged: ${dateStr} at ${timeStr}</div>
+        <div class="case-meta">Flagged: ${flaggedAt.toLocaleDateString()} at ${flaggedAt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
       </div>
     `;
   });
 }
 
-function openMyCases() {
+async function openMyCases() {
+  if (!appAuth.session) { openAuthModal(); return; }
+  await loadCases();
   renderMyCases();
   showScreen('cases');
 }
 
-function goToCase(address) {
-  document.getElementById('wallet-input').value = address;
-  analyzeWallet();
+function openCaseDetail(caseId) {
+  const savedCase = flaggedCases.find(c => c.id === caseId);
+  if (!savedCase) return;
+  currentCase = savedCase;
+  currentViewIsSnapshot = true;
+  renderWalletResults(savedCase.wallet_address, snapshotToDisplayData(savedCase), snapshotToDisplayData(savedCase).graph, { caseSnapshot: true });
+}
+
+function runFreshCaseAnalysis() {
+  if (!currentCase) return;
+  document.getElementById('wallet-input').value = currentCase.wallet_address;
+  analyzeWallet({ forceLive: true, fromCase: true });
 }
 
 // ==========================================
@@ -1725,6 +2035,9 @@ function selectChip(el) {
 function goBack() {
   showScreen('search');
   currentWallet = null;
+  currentCase = null;
+  currentViewIsSnapshot = false;
+  document.getElementById('caseSnapshotNotice').classList.add('hidden');
   document.getElementById('wallet-input').value = '';
   closeAssistant();
   closeReport();
@@ -1753,7 +2066,7 @@ function clearSearchError() {
   document.getElementById('wallet-input').classList.remove('error');
 }
 
-async function analyzeWallet() {
+async function analyzeWallet(options = {}) {
   const raw = document.getElementById('wallet-input').value.trim();
   if (!raw) {
     showSearchError('Enter a wallet address to begin, or select an example below.');
@@ -1764,6 +2077,14 @@ async function analyzeWallet() {
     showSearchError('Invalid Ethereum address format (must be 0x followed by 40 hex characters).');
     return;
   }
+
+  if (isProductionMode() && !appAuth.session) {
+    openAuthModal();
+    return;
+  }
+
+  if (!options.fromCase) currentCase = null;
+  currentViewIsSnapshot = false;
   
   clearSearchError();
   
@@ -1777,7 +2098,7 @@ async function analyzeWallet() {
   let key = raw;
   let liveGraph = null;
 
-  if (mockKey) {
+  if (mockKey && !options.forceLive && !isProductionMode()) {
     // ── MOCK PATH ──
     key = mockKey;
     data = WALLETS[mockKey];
@@ -1787,7 +2108,7 @@ async function analyzeWallet() {
   } else {
     // ── REAL DATA PATH ──
     try {
-      const res = await fetch(`/api/wallet/${encodeURIComponent(raw)}/score`);
+      const res = await apiFetch(`/api/wallet/${encodeURIComponent(raw)}/score`);
       const json = await res.json();
       
       if (!res.ok) {
@@ -1871,6 +2192,51 @@ async function analyzeWallet() {
 
   setTimeout(() => drawGraph(key, liveGraph), 150);
   resetChat();
+  const caseNotice = document.getElementById('caseSnapshotNotice');
+  caseNotice.classList.toggle('hidden', !options.fromCase);
+  if (options.fromCase) caseNotice.innerHTML = '<span>Viewing a fresh current analysis. The saved case snapshot remains unchanged.</span>';
+}
+
+function renderWalletResults(key, data, graphData, options = {}) {
+  currentWallet = key;
+  currentViewIsSnapshot = Boolean(options.caseSnapshot);
+  addToRecent(key);
+  document.getElementById('result-wallet-display').textContent = key.slice(0, 10) + '…' + key.slice(-4);
+  updateGauge(data.score);
+  const meta = riskMeta(data.score);
+  const riskLabelEl = document.getElementById('riskLabel');
+  riskLabelEl.className = 'risk-label-badge ' + meta.cls;
+  riskLabelEl.textContent = meta.label;
+  document.getElementById('flag-tags').innerHTML = data.flags.map(flag => {
+    const text = typeof flag === 'string' ? flag : flag.label;
+    return `<div class="flag-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>${text}</div>`;
+  }).join('');
+  document.getElementById('wallet-meta-rows').innerHTML = `
+    <div class="wallet-meta-row"><span class="wallet-meta-key">Chain</span><span class="wallet-meta-val">${data.chain}</span></div>
+    <div class="wallet-meta-row"><span class="wallet-meta-key">Transactions</span><span class="wallet-meta-val">${data.txCount}</span></div>
+    <div class="wallet-meta-row"><span class="wallet-meta-key">Volume</span><span class="wallet-meta-val">${data.volume}</span></div>
+    <div class="wallet-meta-row"><span class="wallet-meta-key">First seen</span><span class="wallet-meta-val">${data.firstSeen}</span></div>
+    <div class="wallet-meta-row"><span class="wallet-meta-key">Last seen</span><span class="wallet-meta-val">${data.lastSeen}</span></div>`;
+  updateFlagButton();
+  renderScoreBreakdown(data);
+  document.getElementById('breakdownPanel').classList.remove('open');
+  document.getElementById('breakdownTrigger').classList.remove('open');
+  document.getElementById('breakdownTrigger').setAttribute('aria-expanded', 'false');
+  const notice = document.getElementById('caseSnapshotNotice');
+  notice.classList.toggle('hidden', !options.caseSnapshot);
+  if (options.caseSnapshot) notice.innerHTML = '<span>Viewing the immutable flag-time snapshot for this case.</span><button type="button" onclick="runFreshCaseAnalysis()">Run fresh current analysis</button>';
+  showScreen('results');
+  setTimeout(() => drawGraph(key, graphData), 150);
+  resetChat();
+}
+
+function getCurrentWalletData() {
+  if (currentViewIsSnapshot && currentCase && currentWallet && currentCase.wallet_address.toLowerCase() === currentWallet.toLowerCase()) return snapshotToDisplayData(currentCase);
+  const live = currentWallet ? liveWalletMeta.get(currentWallet.toLowerCase()) : null;
+  if (live) return live;
+  if (currentWallet && WALLETS[currentWallet]) return WALLETS[currentWallet];
+  if (currentCase && currentWallet && currentCase.wallet_address.toLowerCase() === currentWallet.toLowerCase()) return snapshotToDisplayData(currentCase);
+  return null;
 }
 
 // ==========================================
@@ -2272,6 +2638,7 @@ function resetChat() {
 
 // Initialize chat on page load for when the user opens the panel from the dashboard
 resetChat();
+initializeAuth();
 
 // ==========================================
 // AI ASSISTANT — CHAT
@@ -2326,8 +2693,8 @@ async function sendChat() {
       userQuestion:  text,
       walletLoaded:  !!currentWallet,
       walletAddress: currentWallet || '',
-      riskScore:     currentWallet ? (WALLETS[currentWallet] || liveWalletMeta.get(currentWallet.toLowerCase())).score : null,
-      flaggedReasons: currentWallet ? (WALLETS[currentWallet] || liveWalletMeta.get(currentWallet.toLowerCase())).flags.map(f => typeof f === 'string' ? f : f.label) : []
+      riskScore:     getCurrentWalletData()?.score ?? null,
+      flaggedReasons: getCurrentWalletData()?.flags.map(f => typeof f === 'string' ? f : f.label) || []
     };
 
     // 8-second timeout via AbortController
@@ -2335,7 +2702,7 @@ async function sendChat() {
     const timeoutId  = setTimeout(() => controller.abort(), 8000);
 
     try {
-      const response = await fetch('/api/assistant', {
+      const response = await apiFetch('/api/assistant', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify(payload),
@@ -2389,7 +2756,7 @@ function getResponse(text) {
   }
 
   // Wallet IS loaded — wallet-aware responses
-  const data  = WALLETS[currentWallet] || liveWalletMeta.get(currentWallet.toLowerCase());
+  const data  = getCurrentWalletData();
   const flags = data.flags.map(f => typeof f === 'string' ? f : f.label);
 
   if (lower.includes('why') || lower.includes('flagged') || lower.includes('flag')) {
@@ -2428,7 +2795,7 @@ function getResponse(text) {
 // ==========================================
 function openReport() {
   if (!currentWallet) return;
-  const data = WALLETS[currentWallet] || liveWalletMeta.get(currentWallet.toLowerCase());
+  const data = getCurrentWalletData();
   const { label } = riskMeta(data.score);
   document.getElementById('rpt-wallet').textContent = currentWallet;
   document.getElementById('rpt-score').textContent = data.score + ' / 100';
@@ -2442,7 +2809,7 @@ function closeReport() {
 }
 function downloadPDF() {
   if (!currentWallet) return;
-  const data = WALLETS[currentWallet] || liveWalletMeta.get(currentWallet.toLowerCase());
+  const data = getCurrentWalletData();
   const { label } = riskMeta(data.score);
   const timestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) + ' IST';
   const shortAddr = currentWallet.slice(0, 10) + '\u2026' + currentWallet.slice(-6);

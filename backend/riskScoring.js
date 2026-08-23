@@ -1,5 +1,14 @@
 'use strict';
 
+const SCORING_THRESHOLDS = Object.freeze({
+  highRiskScore: 67,
+  moderateRiskScore: 34,
+  fanInDistinctSenders: 5,
+  fanOutDistinctRecipients: 5,
+  highVelocityTransfersPerHour: 10,
+  fanInMedianUsd: 125,
+});
+
 // ── Token USD-equivalent table ────────────────────────────────────────────────
 // Hardcoded rough pegs. Update before demo if ETH price moves significantly.
 // Any token NOT in this table gets usdValue = 0 and is excluded from all
@@ -28,13 +37,7 @@ function toUsd(value, asset) {
 // PRODUCTION NOTE: Replace this hardcoded list with a live OFAC SDN feed
 // (e.g. polled daily from https://www.treasury.gov/ofac/downloads/sdn.xml
 // or a commercial compliance API) before deploying to production.
-const FLAGGED_ADDRESSES = new Set([
-  '0x8589427373d6d84e98730d7795d8f6f8731fda0',  // Tornado Cash Router
-  '0x722122df12d4e14e13ac3b6895a86e84145b6967',  // Tornado Cash 0.1 ETH
-  '0xdd4c48c0b24039969fc16d1cdf626eab821d3384',  // Tornado Cash 0.1 ETH (v2)
-  '0xd90e2f925da726b50c4ed8d0fb90ad053324f31b',  // Tornado Cash 1 ETH
-  '0x910cbd523d972eb0a6f4cae4618ad62622b39dbf',  // Tornado Cash 10 ETH
-]);
+// Ethereum addresses are supplied by the live OFAC feed at scoring time.
 
 // ── Spam token filter ─────────────────────────────────────────────────────────
 // Returns true if the transfer should be EXCLUDED from scoring signals.
@@ -74,9 +77,10 @@ function median(arr) {
  *   { address, balanceEth, totalTransfers, transfers: [{hash,from,to,value,asset,category,timestamp}] }
  * @returns {{ score: number, band: string, flags: Array<{label,severity,explanation}>, graph: object }}
  */
-function scoreWallet(walletData) {
+function scoreWallet(walletData, sanctions) {
   const { address, balanceEth, totalTransfers, transfers = [] } = walletData;
   const centerAddr = (address || '').toLowerCase();
+  const sanctionedAddresses = sanctions?.addresses || new Set();
 
   // ── 1. Separate spam from real ───────────────────────────────────────────
   const realTransfers = transfers.filter(t => !isSpam(t));
@@ -92,9 +96,9 @@ function scoreWallet(walletData) {
   for (const t of realTransfers) {
     const from = (t.from || '').toLowerCase();
     const to   = (t.to   || '').toLowerCase();
-    if (FLAGGED_ADDRESSES.has(from) || FLAGGED_ADDRESSES.has(to)) {
+    if (sanctionedAddresses.has(from) || sanctionedAddresses.has(to)) {
       flaggedAddressHit = true;
-      flaggedMatchAddr  = FLAGGED_ADDRESSES.has(from) ? t.from : t.to;
+      flaggedMatchAddr  = sanctionedAddresses.has(from) ? t.from : t.to;
       break;
     }
   }
@@ -109,9 +113,9 @@ function scoreWallet(walletData) {
     .filter(v => v > 0);   // zero-value (unlisted token) excluded from median
 
   const medianInUsd = median(incomingUsd);
-  const fanIn = distinctSenders.size >= 5
+  const fanIn = distinctSenders.size >= SCORING_THRESHOLDS.fanInDistinctSenders
     && medianInUsd !== null
-    && medianInUsd < 125;  // ~0.05 ETH at $2500/ETH
+    && medianInUsd < SCORING_THRESHOLDS.fanInMedianUsd;  // ~0.05 ETH at $2500/ETH
 
   // ── 4. Signal: Fan-out (sliding 24-hour window) ──────────────────────────
   // For each outgoing transfer t, count distinct recipient addresses in
@@ -133,7 +137,7 @@ function scoreWallet(walletData) {
     const distinctRecipients = new Set(
       inWindow.map(t => (t.to || '').toLowerCase()).filter(Boolean)
     );
-    if (distinctRecipients.size >= 5) fanOut = true;
+    if (distinctRecipients.size >= SCORING_THRESHOLDS.fanOutDistinctRecipients) fanOut = true;
   }
 
   // ── 5. Signal: Velocity (fixed clock-hour buckets) ───────────────────────
@@ -149,7 +153,7 @@ function scoreWallet(walletData) {
     hourBuckets.set(bucket, (hourBuckets.get(bucket) || 0) + 1);
   }
   for (const count of hourBuckets.values()) {
-    if (count > 10) { highVelocity = true; break; }
+    if (count > SCORING_THRESHOLDS.highVelocityTransfersPerHour) { highVelocity = true; break; }
   }
 
   // ── 6. Compute score ─────────────────────────────────────────────────────
@@ -160,8 +164,8 @@ function scoreWallet(walletData) {
   if (highVelocity)      score += 10;
   score = Math.min(score, 100);
 
-  const band = score >= 67 ? 'High Risk'
-             : score >= 34 ? 'Moderate Risk'
+  const band = score >= SCORING_THRESHOLDS.highRiskScore ? 'High Risk'
+             : score >= SCORING_THRESHOLDS.moderateRiskScore ? 'Moderate Risk'
              : 'Low Risk';
 
   // ── 7. Build flags array ──────────────────────────────────────────────────
@@ -174,7 +178,7 @@ function scoreWallet(walletData) {
     flags.push({
       label:       'Linked to flagged address',
       severity:    'high',
-      explanation: `This wallet transacted directly with ${shortAddr}, which is on the OFAC Tornado Cash sanctions list. Direct interaction with sanctioned contracts is a serious compliance red flag.`
+      explanation: `This wallet transacted directly with ${shortAddr}, which appears in the current OFAC sanctions feed. Direct interaction with sanctioned addresses is a serious compliance red flag.`
     });
   }
 
@@ -240,7 +244,7 @@ function scoreWallet(walletData) {
     graphNodes.push({
       id,
       address: addr,
-      riskLevel: FLAGGED_ADDRESSES.has(addr.toLowerCase()) ? 'high' : 'low'
+      riskLevel: sanctionedAddresses.has(addr.toLowerCase()) ? 'high' : 'low'
     });
     graphEdges.push({
       from:     id,
@@ -256,7 +260,7 @@ function scoreWallet(walletData) {
     graphNodes.push({
       id,
       address: addr,
-      riskLevel: FLAGGED_ADDRESSES.has(addr.toLowerCase()) ? 'high' : 'low'
+      riskLevel: sanctionedAddresses.has(addr.toLowerCase()) ? 'high' : 'low'
     });
     graphEdges.push({
       from:     'center',
