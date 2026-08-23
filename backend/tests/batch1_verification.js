@@ -38,9 +38,12 @@ async function testCasing() {
     }
   });
 
-  const addr = '0x1111111111111111111111111111111111111111';
-  await fetcher(addr.toUpperCase());
-  await fetcher(addr.toLowerCase());
+  // Letters are required so the case transformation is observable; only the
+  // hex portion may be uppercased — '0X...' fails the /^0x[0-9a-f]{40}$/
+  // validation and would exercise the rejection path instead of the cache.
+  const addr = '0xabcdef0123456789abcdef0123456789abcdef01';
+  await fetcher('0x' + addr.slice(2).toUpperCase());
+  await fetcher(addr);
 
   assert.equal(calls, 3); // Second call should hit cache regardless of input casing
   console.log('✓ Casing normalization verified');

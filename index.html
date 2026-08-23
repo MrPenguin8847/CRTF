@@ -696,6 +696,7 @@
       max-width: 88%; padding: 12px 16px;
       border-radius: 12px; font-size: 0.875rem; line-height: 1.55;
       overflow-wrap: anywhere; word-break: break-word;
+      white-space: pre-wrap; /* bubbles are plain text nodes; keep literal line breaks visible */
     }
     .chat-msg.assistant .chat-bubble {
       background: var(--surface); color: var(--text-primary);
@@ -1621,6 +1622,16 @@ function getCssVar(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
+// Escape a value for safe interpolation into an innerHTML template.
+// Used wherever server/model-supplied strings meet markup (chat bubbles use
+// textContent directly; this covers template-built views like the score
+// breakdown and graph tooltip).
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, ch => (
+    { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]
+  ));
+}
+
 // ==========================================
 let currentWallet = null;
 let animationFrameId = null;
@@ -2305,9 +2316,9 @@ function renderScoreBreakdown(data) {
       return `
       <div class="breakdown-row" style="margin-bottom:16px;">
         <div class="breakdown-label" style="margin-bottom:2px;">
-          <span style="font-weight:600;color:var(--text-primary);">${flag.label}</span>
+          <span style="font-weight:600;color:var(--text-primary);">${escapeHtml(flag.label)}</span>
         </div>
-        <div style="font-size:0.7rem;color:var(--text-secondary);line-height:1.4;margin-bottom:6px;">${flag.explanation}</div>
+        <div style="font-size:0.7rem;color:var(--text-secondary);line-height:1.4;margin-bottom:6px;">${escapeHtml(flag.explanation)}</div>
         <div class="breakdown-track">
           <div class="breakdown-bar" data-pct="${barPct}" style="background:${barColor};width:0"></div>
         </div>
@@ -2417,9 +2428,9 @@ function drawGraph(walletKey, liveGraphData) {
       const edge = graphEdges.find(e => e.fromNode === found || e.toNode === found);
       const { label, color } = riskMeta(found.score);
       tooltip.innerHTML = `
-        <div style="font-weight:600;color:var(--text-primary);">${found.address}</div>
-        <div style="margin-top:4px;font-size:0.75rem;color:${color};font-weight:600;">Risk: ${found.score}/100 &mdash; ${label}</div>
-        ${edge ? `<div class="graph-tooltip-hash" style="margin-top:8px;">Tx: ${edge.hash}</div><div class="graph-tooltip-amount">${edge.amount}</div>` : ''}
+        <div style="font-weight:600;color:var(--text-primary);">${escapeHtml(found.address)}</div>
+        <div style="margin-top:4px;font-size:0.75rem;color:${color};font-weight:600;">Risk: ${Number(found.score) || 0}/100 &mdash; ${label}</div>
+        ${edge ? `<div class="graph-tooltip-hash" style="margin-top:8px;">Tx: ${escapeHtml(edge.hash)}</div><div class="graph-tooltip-amount">${escapeHtml(edge.amount)}</div>` : ''}
       `;
       tooltip.style.left = (mx + 14) + 'px';
       tooltip.style.top = (my - 20) + 'px';
@@ -2648,16 +2659,28 @@ function addMessage(role, text, source) {
   const msg = document.createElement('div');
   msg.className = 'chat-msg ' + role;
 
-  let sourceTag = '';
+  // Sender and bubble are plain text — never trust model output or typed
+  // input as markup. Line breaks are preserved visually via CSS pre-wrap.
+  const sender = document.createElement('div');
+  sender.className = 'chat-sender';
+  sender.textContent = role === 'assistant' ? 'FlowTrace Assistant' : 'You';
+  const bubble = document.createElement('div');
+  bubble.className = 'chat-bubble';
+  bubble.textContent = text;
+  msg.append(sender, bubble);
+
   if (role === 'assistant' && source) {
+    const tag = document.createElement('div');
+    tag.className = 'msg-source';
     if (source === 'ai') {
-      sourceTag = `<div class="msg-source"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>AI response</div>`;
+      // Static markup only (built here, not from message text).
+      tag.innerHTML = '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>AI response';
     } else if (source === 'fallback') {
-      sourceTag = `<div class="msg-source">Quick answer</div>`;
+      tag.textContent = 'Quick answer';
     }
+    if (tag.childNodes.length) msg.append(tag);
   }
 
-  msg.innerHTML = `<div class="chat-sender">${role === 'assistant' ? 'FlowTrace Assistant' : 'You'}</div><div class="chat-bubble">${text}</div>${sourceTag}`;
   messages.appendChild(msg);
   messages.scrollTop = messages.scrollHeight;
 }
