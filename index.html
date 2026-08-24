@@ -7,7 +7,7 @@
   <meta name="description" content="FlowTrace helps law enforcement investigators quickly assess wallet risk, visualize transaction flows, and generate investigation reports — no blockchain expertise required." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@300;400;500;600;700;800&family=Saira+Stencil+One&family=Spectral:ital,wght@0,500;0,600;0,700;1,500;1,600&display=swap" rel="stylesheet" />
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <style>
     /* ==========================================
@@ -22,10 +22,10 @@
       --text-primary: #E8E9EB; /* off-white body text  ~16:1 contrast */
       --text-secondary: #8A8D93; /* muted labels / captions */
       --text-tertiary: #55585F;  /* very muted timestamps etc. */
-      --accent: #4D90D4;        /* blue — 5.8:1 on --bg, 5.3:1 on --surface */
-      --accent-light: #0E1E30;  /* subtle tinted bg for pills/icons */
-      --accent-mid: #3A7ABE;    /* pressed / visited accent */
-      --accent-hover: #6AAAE0;  /* lighter blue on hover */
+      --accent: #E8A33D;        /* evidence amber (was blue) — 8.0:1 on --bg */
+      --accent-light: rgba(232, 163, 61, 0.10); /* subtle tinted bg for pills/icons */
+      --accent-mid: #CF8A28;    /* pressed / visited accent */
+      --accent-hover: #F2B554;  /* lighter amber on hover */
       --risk-green: #4ADE80;    /* bright green on dark bg */
       --risk-green-bg: #0D2016; /* dark green tint */
       --risk-amber: #FBBF24;    /* amber — clearly readable on dark */
@@ -43,8 +43,8 @@
       --bg-alt: #0B0D11;
       --surface-alt: #13161D;
       --border-alt: #1C2030;
-      --border-accent: #1C3250;
-      --accent-rgb: 77, 144, 212;
+      --border-accent: rgba(232, 163, 61, 0.30);
+      --accent-rgb: 232, 163, 61;
     
       --text-primary-rgb: 232, 233, 235;
       --risk-green-rgb: 74, 222, 128;
@@ -55,11 +55,41 @@
   --border-rgb: 39, 43, 52;
 }
 
+    /* ==========================================
+       LANDING TOKENS — "CASE FILE" SYSTEM (--fx-*)
+       Scoped namespace: the tool reads --bg/--surface/
+       --accent etc. and is untouched by these.
+    ========================================== */
+    :root {
+      --fx-records: #161310;      /* records-room black */
+      --fx-records-deep: #100E0B;
+      --fx-folder: #201A14;       /* folder-board card surface */
+      --fx-folder-edge: #3A3226;
+      --fx-manila: #E6D2A8;       /* evidence paper */
+      --fx-manila-ink: #241C10;   /* typed ink on manila */
+      --fx-ink: #EFE9DC;
+      --fx-muted: #B5AC9A;
+      --fx-faint: #948A75;
+      --fx-marker: #E8A33D;       /* evidence amber */
+      --fx-marker-hover: #F2B554;
+      --fx-marker-ink: #1A140A;
+      --fx-oxide: #8E2F26;        /* stamp red */
+      --fx-rule: rgba(230, 210, 168, 0.10);
+      --fx-rule-strong: rgba(230, 210, 168, 0.24);
+      --fx-font-display: 'Spectral', Georgia, 'Times New Roman', serif;
+      --fx-font-stamp: 'Saira Stencil One', 'Arial Black', sans-serif;
+      --fx-font-mono: 'IBM Plex Mono', 'Courier New', monospace;
+    }
+
+    html { scroll-padding-top: 76px; }
+    :focus-visible { outline: 2px solid var(--fx-marker); outline-offset: 3px; }
+    ::selection { background: rgba(232, 163, 61, 0.35); color: #FFF8EC; }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     html { scroll-behavior: smooth; font-size: 16px; }
     body {
       font-family: var(--font);
-      background: var(--bg);
+      background: var(--fx-records);
       color: var(--text-primary);
       line-height: 1.6;
       -webkit-font-smoothing: antialiased;
@@ -71,158 +101,255 @@
     .container { max-width: 1120px; margin: 0 auto; padding: 0 40px; }
     .section { padding: 80px 0; }
 
-    /* TOPNAV */
+    /* TOPNAV — case-file header bar */
     .topnav {
       position: sticky; top: 0; z-index: 100;
-      background: var(--bg-alpha-92);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid var(--border);
+      background: rgba(22, 19, 16, 0.93);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--fx-rule-strong);
       padding: 0 40px;
     }
     .topnav-inner {
       max-width: 1120px; margin: 0 auto;
       display: flex; align-items: center; justify-content: space-between;
-      height: 60px;
+      height: 60px; gap: 24px;
     }
     .topnav-logo {
       display: flex; align-items: center; gap: 10px;
-      font-weight: 700; font-size: 1.05rem; color: var(--text-primary);
-      letter-spacing: -0.01em;
+      font-family: var(--fx-font-stamp);
+      font-weight: 400; font-size: 0.95rem; color: var(--fx-ink);
+      letter-spacing: 0.16em;
     }
     .topnav-logo-icon {
       width: 30px; height: 30px;
-      background: var(--accent);
-      border-radius: 7px;
+      color: var(--fx-marker);
+      background: none;
+      border: 1.5px solid var(--fx-marker);
+      border-radius: 4px;
       display: flex; align-items: center; justify-content: center;
+      transform: rotate(-4deg);
     }
-    .topnav-logo-icon svg { width: 18px; height: 18px; }
+    .topnav-logo-icon svg { width: 17px; height: 17px; }
+    .topnav-links { display: flex; gap: 26px; }
+    .topnav-links a {
+      font-family: var(--fx-font-mono); font-size: 0.72rem;
+      letter-spacing: 0.09em; text-transform: uppercase;
+      color: var(--fx-muted); transition: color 0.15s;
+    }
+    .topnav-links a:hover { color: var(--fx-marker); }
+    .topnav-actions { display: flex; align-items: center; gap: 16px; }
     .topnav-cta {
-      background: var(--accent); color: #fff;
-      padding: 8px 20px; border-radius: 7px;
-      font-weight: 600; font-size: 0.875rem;
-      transition: background 0.15s;
+      background: var(--fx-marker); color: var(--fx-marker-ink);
+      padding: 8px 18px; border-radius: 3px;
+      font-weight: 700; font-size: 0.82rem;
+      box-shadow: 2px 2px 0 rgba(230, 210, 168, 0.28);
+      transition: background 0.15s, transform 0.1s, box-shadow 0.1s;
     }
-    .topnav-cta:hover { background: var(--accent-hover); }
-    .account-state { display:flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--text-secondary); }
-    .account-org { max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--text-primary); }
-    .account-link { background:none; color:var(--accent-light); font-size:0.78rem; padding:4px; }
-    .account-link:hover { color:var(--text-primary); }
+    .topnav-cta:hover { background: var(--fx-marker-hover); }
+    .topnav-cta:active { transform: translate(1px, 1px); box-shadow: 1px 1px 0 rgba(230, 210, 168, 0.28); }
+    .account-state { display:flex; align-items:center; gap:8px; font-size:0.78rem; color:var(--fx-muted); }
+    .account-org { max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; color:var(--fx-ink); }
+    .account-link { background:none; color:var(--fx-marker); font-size:0.78rem; padding:4px; }
+    .account-link:hover { color:var(--fx-marker-hover); }
 
-    
     .theme-toggle {
-      background: none; border: none; color: var(--text-secondary); cursor: pointer;
-      display: flex; align-items: center; justify-content: center; padding: 6px; border-radius: 50%;
+      background: none; border: none; color: var(--fx-muted); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; padding: 6px; border-radius: 4px;
       transition: color 0.2s, background 0.2s;
     }
-    .theme-toggle:hover { color: var(--text-primary); background: var(--surface); }
+    .theme-toggle:hover { color: var(--fx-ink); background: rgba(230, 210, 168, 0.08); }
     [data-theme="light"] .sun-icon { display: none !important; }
     [data-theme="light"] .moon-icon { display: block !important; }
-    /* HERO */
+    /* HERO — case-file cover with exhibit board */
     .hero {
-      padding: 110px 0 100px;
-      background: var(--bg);
-      border-bottom: 1px solid var(--border);
+      padding: 96px 0;
+      background:
+        radial-gradient(1100px 540px at 16% -12%, rgba(232, 163, 61, 0.06), transparent 62%),
+        var(--fx-records);
+      border-bottom: 1px solid var(--fx-rule);
       position: relative;
       overflow: hidden;
     }
-    .hero-network-canvas {
-      position: absolute;
-      top: 0; left: 0;
-      width: 100%; height: 100%;
-      z-index: 1;
-      pointer-events: none;
+    .hero-inner {
+      max-width: 1120px; margin: 0 auto; padding: 0 40px;
+      display: grid;
+      grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
+      gap: 64px; align-items: center;
+      position: relative; z-index: 2;
     }
-    .hero-inner { max-width: 1120px; margin: 0 auto; padding: 0 40px; text-align: center; position: relative; z-index: 2; }
-    .hero-badge {
-      display: inline-flex; align-items: center; gap: 8px;
-      background: var(--accent-light); color: var(--accent);
-      border: 1px solid var(--border-accent); border-radius: 100px;
-      padding: 6px 14px; font-size: 0.8rem; font-weight: 600;
-      margin-bottom: 32px; letter-spacing: 0.02em;
+    .hero-kicker {
+      font-family: var(--fx-font-stamp);
+      font-size: 0.72rem; letter-spacing: 0.22em;
+      color: var(--fx-marker);
+      margin-bottom: 22px;
+      display: flex; align-items: center; gap: 10px;
     }
-    .hero-badge-dot {
-      width: 6px; height: 6px; background: var(--accent);
-      border-radius: 50%; flex-shrink: 0;
-    }
+    .hero-kicker::before { content: ""; width: 26px; height: 1px; background: var(--fx-marker); }
     .hero h1 {
-      font-size: clamp(2.4rem, 4vw, 3.5rem);
-      font-weight: 800;
-      line-height: 1.15;
-      letter-spacing: -0.03em;
-      color: var(--text-primary);
-      max-width: 760px; margin: 0 auto 20px;
+      font-family: var(--fx-font-display);
+      font-size: clamp(2.3rem, 4vw, 3.4rem);
+      font-weight: 600;
+      line-height: 1.12;
+      letter-spacing: -0.01em;
+      color: var(--fx-ink);
+      max-width: 640px; margin: 0 0 20px;
     }
-    .hero h1 span { color: var(--accent); }
+    .hero h1 span { color: var(--fx-marker); font-style: italic; }
     .hero-sub {
-      font-size: 1.125rem; color: var(--text-secondary);
-      max-width: 520px; margin: 0 auto 40px;
+      font-size: 1.05rem; color: var(--fx-muted);
+      max-width: 520px; margin: 0 0 36px;
       line-height: 1.65;
     }
-    .hero-actions { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .hero-actions { display: flex; flex-direction: column; align-items: flex-start; gap: 16px; }
+    .hero-actions .btn-primary {
+      background: var(--fx-marker); color: var(--fx-marker-ink);
+      border-radius: 3px; padding: 14px 30px;
+      box-shadow: 3px 3px 0 rgba(230, 210, 168, 0.28);
+      transition: background 0.15s, transform 0.1s, box-shadow 0.1s;
+    }
+    .hero-actions .btn-primary:hover {
+      background: var(--fx-marker-hover);
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0 rgba(230, 210, 168, 0.28);
+    }
+    .hero-actions .btn-primary:active { transform: translate(1px, 1px); box-shadow: 2px 2px 0 rgba(230, 210, 168, 0.28); }
+    .hero-ghost {
+      font-family: var(--fx-font-mono); font-size: 0.75rem;
+      letter-spacing: 0.09em; text-transform: uppercase;
+      color: var(--fx-muted);
+      display: inline-flex; align-items: center; gap: 8px;
+      transition: color 0.15s;
+    }
+    .hero-ghost:hover { color: var(--fx-marker); }
+    .hero-meta {
+      margin-top: 34px; padding-top: 16px;
+      border-top: 1px solid var(--fx-rule);
+      font-family: var(--fx-font-mono);
+      font-size: 0.68rem; letter-spacing: 0.06em; text-transform: uppercase;
+      color: var(--fx-faint);
+      display: flex; flex-wrap: wrap; gap: 8px 22px;
+    }
+    .hero-meta b { color: var(--fx-muted); font-weight: 500; }
+
+    /* EXHIBIT BOARD — manila evidence tag */
+    .fx-board { position: relative; z-index: 2; }
+    .fx-tag {
+      position: relative;
+      background: linear-gradient(160deg, #EBD9B2, #DFC894);
+      color: var(--fx-manila-ink);
+      border-radius: 6px;
+      padding: 56px 26px 24px;
+      transform: rotate(1.6deg);
+      box-shadow:
+        0 24px 50px rgba(0, 0, 0, 0.55),
+        inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+        inset 0 0 60px rgba(120, 90, 40, 0.18);
+    }
+    .fx-tag::before {
+      content: "";
+      position: absolute; top: 18px; left: 50%; transform: translateX(-50%);
+      width: 16px; height: 16px; border-radius: 50%;
+      background: var(--fx-records-deep);
+      box-shadow: 0 0 0 4px #CBAD77, inset 0 1px 3px rgba(0, 0, 0, 0.55);
+    }
+    .fx-tag::after {
+      content: "";
+      position: absolute; top: 42px; left: 12px; right: 12px;
+      border-top: 2px dashed rgba(36, 28, 16, 0.28);
+    }
+    .fx-tag-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 12px; gap: 12px; }
+    .fx-tag-exhibit { font-family: var(--fx-font-stamp); font-size: 0.8rem; letter-spacing: 0.18em; }
+    .fx-tag-case { font-family: var(--fx-font-mono); font-size: 0.6rem; letter-spacing: 0.08em; color: var(--fx-manila-dim, rgba(36,28,16,0.62)); white-space: nowrap; }
+    .fx-tag-addr {
+      font-family: var(--fx-font-mono);
+      font-size: 0.8rem; letter-spacing: 0.02em;
+      margin-bottom: 14px;
+    }
+    .fx-graph-wrap {
+      position: relative;
+      background: rgba(36, 28, 16, 0.05);
+      border: 1px solid rgba(36, 28, 16, 0.25);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .fx-graph-wrap canvas { display: block; width: 100%; height: auto; aspect-ratio: 16 / 10; }
+    .fx-tag-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 16px; gap: 14px; }
+    .fx-gauge { display: flex; align-items: center; gap: 10px; }
+    .fx-gauge svg { width: 74px; height: 42px; display: block; flex-shrink: 0; }
+    .fx-gauge-val {
+      font-family: var(--fx-font-mono);
+      font-size: 0.64rem; text-transform: uppercase; letter-spacing: 0.06em;
+      color: rgba(36, 28, 16, 0.62); line-height: 1.35;
+    }
+    .fx-gauge-val strong { display: block; font-size: 0.84rem; color: var(--fx-oxide, #8E2F26); letter-spacing: 0.01em; }
+    .fx-stamp {
+      font-family: var(--fx-font-stamp);
+      font-size: 0.72rem; letter-spacing: 0.2em;
+      color: var(--fx-oxide, #8E2F26);
+      border: 2.5px solid var(--fx-oxide, #8E2F26);
+      border-radius: 3px;
+      padding: 5px 10px 3px;
+      transform: rotate(-7deg);
+      opacity: 0.85;
+      flex-shrink: 0;
+    }
+    .fx-caption {
+      margin-top: 14px;
+      font-family: var(--fx-font-mono);
+      font-size: 0.62rem; letter-spacing: 0.1em; text-transform: uppercase;
+      color: var(--fx-faint);
+      text-align: right;
+    }
+
+    /* Shared primary button (footer CTA below the tool also uses this base) */
     .btn-primary {
       display: inline-flex; align-items: center; gap: 8px;
-      background: var(--accent); color: #fff;
+      background: var(--fx-marker); color: var(--fx-marker-ink);
       padding: 14px 32px; border-radius: 9px;
       font-weight: 700; font-size: 1rem;
       transition: background 0.15s, transform 0.1s;
-      box-shadow: 0 2px 10px rgba(var(--accent-rgb), 0.22);
     }
-    .btn-primary:hover { background: var(--accent-hover); transform: translateY(-1px); }
+    .btn-primary:hover { background: var(--fx-marker-hover); transform: translateY(-1px); }
     .btn-primary:active { transform: translateY(0); }
-    .hero-microcopy { font-size: 0.8rem; color: var(--text-tertiary); }
 
-    /* TRUST BAR */
-    .trust-bar {
-      padding: 24px 0;
-      border-bottom: 1px solid var(--border);
-      background: var(--surface);
-    }
-    .trust-bar-inner {
-      max-width: 1120px; margin: 0 auto; padding: 0 40px;
-      display: flex; align-items: center; gap: 20px; flex-wrap: wrap;
-    }
-    .trust-label {
-      font-size: 0.7rem; font-weight: 600; color: var(--text-tertiary);
-      text-transform: uppercase; letter-spacing: 0.08em; white-space: nowrap;
-    }
-    .trust-divider { width: 1px; height: 18px; background: var(--border); }
-    .trust-badges { display: flex; gap: 10px; flex-wrap: wrap; }
-    .trust-badge {
-      display: inline-block;
-      background: var(--bg);
-      border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 5px 12px;
-      font-size: 0.8rem; font-weight: 500; color: var(--text-secondary);
-    }
-
-    /* STAT ROW */
+    /* STAT ROW — custody ledger strip */
     .stat-row {
-      padding: 64px 0;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg);
+      padding: 0;
+      background: var(--fx-records-deep);
+      border-top: 1px solid var(--fx-rule-strong);
+      border-bottom: 1px solid var(--fx-rule);
     }
     .stat-row-inner {
       max-width: 1120px; margin: 0 auto; padding: 0 40px;
       display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 0;
     }
     .stat-item {
-      text-align: center;
-      padding: 32px 24px;
-      border-right: 1px solid var(--border);
+      padding: 32px 28px 28px;
+      border-right: 1px solid var(--fx-rule);
+      display: flex; flex-direction: column; gap: 7px;
     }
     .stat-item:last-child { border-right: none; }
+    .stat-index {
+      font-family: var(--fx-font-stamp);
+      font-size: 0.6rem; letter-spacing: 0.22em;
+      color: var(--fx-faint);
+    }
     .stat-number {
-      font-size: 3.5rem; font-weight: 800; color: var(--accent);
-      letter-spacing: -0.04em; line-height: 1;
-      margin-bottom: 10px;
+      font-family: var(--fx-font-mono);
+      font-size: clamp(2.2rem, 3.4vw, 3rem);
+      font-weight: 600; color: var(--fx-manila);
+      line-height: 1; letter-spacing: -0.02em;
       font-variant-numeric: tabular-nums;
     }
-    .stat-label { font-size: 0.875rem; color: var(--text-secondary); font-weight: 500; }
+    .stat-label { font-size: 0.8rem; color: var(--fx-muted); }
 
-    /* HOW IT WORKS */
-    .how-it-works { padding: 88px 0; border-bottom: 1px solid var(--border); }
+    /* HOW IT WORKS — chain of custody */
+    .how-it-works {
+      padding: 96px 0;
+      background: var(--fx-records);
+      border-bottom: none;
+      position: relative;
+    }
     .section-label {
       font-size: 0.75rem; font-weight: 700; color: var(--accent);
       text-transform: uppercase; letter-spacing: 0.1em;
@@ -233,63 +360,204 @@
       font-weight: 700; letter-spacing: -0.025em;
       color: var(--text-primary); margin-bottom: 56px;
     }
+    .how-it-works .section-label, .features .section-label {
+      font-family: var(--fx-font-stamp); font-weight: 400;
+      color: var(--fx-marker); letter-spacing: 0.22em; font-size: 0.72rem;
+      margin-bottom: 14px;
+    }
+    .how-it-works .section-title, .features .section-title {
+      font-family: var(--fx-font-display); font-weight: 600;
+      letter-spacing: 0; color: var(--fx-ink);
+    }
     .how-grid {
       display: grid; grid-template-columns: repeat(3, 1fr);
-      gap: 16px;
-    }
-    .how-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 40px 32px;
-      text-align: center;
+      gap: 20px;
       position: relative;
     }
+    .how-grid::before {
+      content: "";
+      position: absolute; top: 26px; left: 4%; right: 4%;
+      border-top: 2px dashed var(--fx-rule-strong);
+    }
+    .how-card {
+      background: var(--fx-folder);
+      border: 1px solid var(--fx-folder-edge);
+      border-radius: 4px;
+      padding: 34px 28px 30px;
+      text-align: left;
+      position: relative;
+    }
+    .how-card::before {
+      content: "";
+      position: absolute; top: 21px; left: 32px;
+      width: 11px; height: 11px; border-radius: 50%;
+      background: var(--fx-marker);
+      box-shadow: 0 0 0 3px var(--fx-records), 0 0 0 5px var(--fx-rule-strong);
+    }
     .how-step {
-      position: absolute; top: 20px; left: 20px;
-      font-size: 0.75rem; font-weight: 700; color: var(--text-tertiary);
+      display: inline-block; margin-bottom: 18px;
+      font-family: var(--fx-font-stamp);
+      font-size: 0.6rem; letter-spacing: 0.22em;
+      color: var(--fx-marker);
+      border: 1px solid var(--fx-rule-strong);
+      background: rgba(230, 210, 168, 0.05);
+      padding: 5px 9px 3px; border-radius: 2px;
     }
     .how-icon {
-      width: 52px; height: 52px; margin: 0 auto 20px;
-      background: var(--accent-light);
-      border-radius: 14px;
+      width: 46px; height: 46px; margin: 0 0 18px;
+      background: rgba(232, 163, 61, 0.10);
+      border: 1px solid rgba(232, 163, 61, 0.30);
+      border-radius: 4px;
       display: flex; align-items: center; justify-content: center;
     }
-    .how-icon svg { width: 26px; height: 26px; color: var(--accent); }
-    .how-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; }
-    .how-desc { font-size: 0.9rem; color: var(--text-secondary); line-height: 1.6; }
+    .how-icon svg { width: 24px; height: 24px; color: var(--fx-marker); }
+    .how-title { font-family: var(--fx-font-display); font-size: 1.25rem; font-weight: 600; margin-bottom: 8px; color: var(--fx-ink); }
+    .how-desc { font-size: 0.9rem; color: var(--fx-muted); line-height: 1.6; }
 
-    /* FEATURE GRID */
-    .features { padding: 88px 0; border-bottom: 1px solid var(--border); }
+    /* FEATURE GRID — folder files */
+    .features {
+      padding: 96px 0;
+      background: var(--fx-records);
+      border-bottom: none;
+    }
     .feature-grid {
       display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 16px;
+      gap: 34px 18px;
     }
     .feature-card {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: var(--radius-md);
-      padding: 28px 24px;
-      transition: border-color 0.2s, box-shadow 0.2s;
+      background: var(--fx-folder);
+      border: 1px solid var(--fx-folder-edge);
+      border-radius: 3px;
+      padding: 30px 22px 26px;
+      position: relative;
+      transition: border-color 0.2s, transform 0.2s;
     }
-    .feature-card:hover {
-      border-color: var(--accent);
-      box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.12);
+    .feature-card::before {
+      content: attr(data-tab);
+      position: absolute; top: -17px; left: 14px;
+      font-family: var(--fx-font-mono);
+      font-size: 0.58rem; letter-spacing: 0.16em;
+      color: var(--fx-faint);
+      background: var(--fx-folder);
+      border: 1px solid var(--fx-folder-edge);
+      border-bottom: none;
+      border-radius: 3px 3px 0 0;
+      padding: 5px 10px;
     }
+    .feature-card:hover { border-color: var(--fx-marker); transform: translateY(-3px); }
     .feature-icon {
-      width: 42px; height: 42px;
-      background: var(--accent-light);
-      border-radius: 10px;
+      width: 40px; height: 40px;
+      background: rgba(232, 163, 61, 0.10);
+      border: 1px solid rgba(232, 163, 61, 0.30);
+      border-radius: 4px;
       display: flex; align-items: center; justify-content: center;
-      margin-bottom: 18px;
+      margin-bottom: 16px;
     }
-    .feature-icon svg { width: 22px; height: 22px; color: var(--accent); }
-    .feature-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; }
-    .feature-desc { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.55; }
+    .feature-icon svg { width: 21px; height: 21px; color: var(--fx-marker); }
+    .feature-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; color: var(--fx-ink); }
+    .feature-desc { font-size: 0.85rem; color: var(--fx-muted); line-height: 1.55; }
 
-    /* TOOL SECTION */
-    .tool-section { padding: 88px 0; background: var(--bg); }
+    /* TEAR STRIP — handoff into the interactive case file */
+    .fx-tear-band { background: var(--fx-records); padding: 0 0 96px; }
+    .fx-tear {
+      display: flex; align-items: center; gap: 22px;
+      max-width: 1120px; margin: 0 auto; padding: 0 40px;
+    }
+    .fx-tear-rule { flex: 1; border-top: 2px dashed var(--fx-rule-strong); }
+    .fx-tear-btn {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: none;
+      border: 1.5px solid var(--fx-marker);
+      color: var(--fx-marker);
+      font-family: var(--fx-font-stamp);
+      font-size: 0.7rem; letter-spacing: 0.18em;
+      padding: 12px 22px 9px; border-radius: 2px;
+      transition: background 0.15s, color 0.15s;
+    }
+    .fx-tear-btn:hover { background: var(--fx-marker); color: var(--fx-marker-ink); }
+    .fx-tear-btn svg { width: 14px; height: 14px; }
+
+    /* TOOL SECTION + LOWER PAGE — one continuous case-file surface.
+       Scoped token remap: everything from "Try FlowTrace now" down
+       inherits the warm palette; sections above are untouched. */
+    .tool-section, .footer-cta, .site-footer {
+      --bg: var(--fx-records);
+      --bg-alt: var(--fx-records-deep);
+      --surface: var(--fx-folder);
+      --surface-alt: #1B1611;
+      --border: var(--fx-folder-edge);
+      --border-alt: #4A4033;
+      --border-hover: #55493A;
+      --text-primary: var(--fx-ink);
+      --text-secondary: var(--fx-muted);
+      --text-tertiary: var(--fx-faint);
+      --text-primary-rgb: 239, 233, 220;
+    }
+    .tool-section { padding: 96px 0; background: var(--fx-records); }
     .tool-section .section-title { margin-bottom: 10px; }
+    .tool-section > .container > .section-label,
+    .footer-cta .section-label {
+      font-family: var(--fx-font-stamp); font-weight: 400;
+      color: var(--fx-marker); letter-spacing: 0.22em; font-size: 0.72rem;
+      margin-bottom: 14px;
+    }
+    .tool-section .section-title {
+      font-family: var(--fx-font-display); font-weight: 600;
+      letter-spacing: 0; color: var(--fx-ink);
+    }
+    .tool-section .section-title span,
+    .footer-cta h2 span {
+      color: var(--fx-marker); font-style: italic;
+    }
+    .tool-section-note {
+      font-family: var(--fx-font-mono);
+      font-size: 0.75rem; letter-spacing: 0.02em;
+      color: var(--fx-muted);
+      margin-bottom: 44px;
+    }
+    .tool-section .tool-container {
+      box-shadow:
+        0 0 0 1px var(--border-alt),
+        0 0 0 12px var(--fx-folder),
+        0 0 0 13px var(--fx-folder-edge),
+        0 36px 80px rgba(0, 0, 0, 0.6);
+    }
+    .footer-cta h2 {
+      font-family: var(--fx-font-display);
+      font-size: clamp(1.6rem, 2.5vw, 2.2rem);
+      font-weight: 600; letter-spacing: 0;
+      color: var(--fx-ink);
+      max-width: 720px; margin: 0 auto 12px;
+    }
+
+    /* LANDING RESPONSIVE */
+    @media (max-width: 1020px) {
+      .hero-inner { grid-template-columns: 1fr; gap: 56px; }
+      .fx-board { max-width: 500px; }
+      .feature-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 900px) {
+      .how-grid { grid-template-columns: 1fr; gap: 44px; }
+      .how-grid::before, .how-card::before { display: none; }
+      .fx-tag { transform: rotate(0deg); }
+    }
+    @media (max-width: 720px) {
+      .topnav-links { display: none; }
+      .stat-row-inner { grid-template-columns: 1fr; }
+      .stat-item { border-right: none; border-bottom: 1px solid var(--fx-rule); padding: 20px 4px; }
+      .stat-item:last-child { border-bottom: none; }
+      .hero-actions { flex-direction: column; }
+    }
+    @media (max-width: 560px) {
+      .container { padding: 0 20px; }
+      .topnav { padding: 0 20px; }
+      .hero-inner { padding: 0 20px; }
+      .stat-row-inner { padding: 0 20px; }
+      .fx-tear { padding: 0 20px; }
+      .feature-grid { grid-template-columns: 1fr; }
+      .fx-tag-foot { flex-direction: column; align-items: flex-start; }
+      .fx-stamp { transform: rotate(-5deg); }
+    }
 
     /* TOOL CONTAINER — contained dark panel inside dark page */
     .tool-container {
@@ -315,12 +583,6 @@
     .chrome-title {
       flex: 1; text-align: center;
       font-size: 0.8rem; color: var(--text-tertiary); font-weight: 500;
-    }
-    .chrome-badge {
-      font-size: 0.7rem; font-weight: 600; color: var(--accent);
-      background: rgba(var(--accent-rgb), 0.12);
-      border: 1px solid rgba(var(--accent-rgb), 0.25);
-      border-radius: 4px; padding: 2px 8px;
     }
 
     /* CASE TRACKING */
@@ -444,7 +706,7 @@
       letter-spacing: -0.02em; margin-bottom: 8px;
     }
     .tool-logo-icon {
-      width: 34px; height: 34px; background: var(--accent-mid);
+      width: 34px; height: 34px; background: var(--fx-marker);
       border-radius: 8px; display: flex; align-items: center; justify-content: center;
     }
     .tool-logo-icon svg { width: 18px; height: 18px; }
@@ -460,7 +722,7 @@
       transition: border-color 0.2s;
     }
     .search-input::placeholder { color: var(--text-tertiary); }
-    .search-input:focus { outline: none; border-color: var(--accent); }
+    .search-input:focus { outline: none; border-color: var(--fx-marker); }
     .search-input.error {
       border-color: var(--risk-red);
       animation: shake 0.32s ease;
@@ -481,25 +743,25 @@
     }
     .search-error-msg:empty { opacity: 0; }
     .search-btn {
-      background: var(--accent-mid); color: #fff;
+      background: var(--fx-marker); color: var(--fx-marker-ink);
       border-radius: 10px; padding: 14px 28px;
       font-weight: 700; font-size: 0.95rem;
       transition: background 0.15s;
       display: flex; align-items: center; gap: 8px;
     }
-    .search-btn:hover { background: var(--accent); }
+    .search-btn:hover { background: var(--fx-marker-hover); }
 
     .example-label { font-size: 0.78rem; color: var(--text-tertiary); margin-bottom: 12px; font-weight: 500; }
     .example-chips { display: flex; flex-wrap: wrap; gap: 8px; }
     .example-chip {
-      background: var(--surface); border: 1px solid var(--border);
-      color: var(--text-secondary); border-radius: 7px;
-      padding: 7px 14px; font-size: 0.78rem; font-family: 'Courier New', monospace;
+      background: rgba(232, 163, 61, 0.05); border: 1px solid rgba(232, 163, 61, 0.28);
+      color: var(--fx-muted); border-radius: 4px;
+      padding: 7px 14px; font-size: 0.78rem; font-family: var(--fx-font-mono);
       cursor: pointer; transition: border-color 0.15s, color 0.15s, background 0.15s;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
       max-width: 300px;
     }
-    .example-chip:hover { border-color: var(--accent); color: var(--accent-hover); background: rgba(var(--accent-rgb), 0.08); }
+    .example-chip:hover { border-color: var(--fx-marker); color: var(--fx-marker-hover); background: rgba(232, 163, 61, 0.08); }
 
     /* RECENTLY VIEWED */
     .recent-strip { margin-bottom: 24px; display: none; }
@@ -525,16 +787,31 @@
     }
 
     .search-info-row {
-      display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px;
       margin-top: 40px;
     }
     .search-info-card {
-      background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
-      padding: 20px;
+      position: relative;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+      padding: 26px 20px 18px;
     }
-    .search-info-card-title { font-size: 0.8rem; color: var(--text-secondary); font-weight: 600; margin-bottom: 6px; }
-    .search-info-card-val { font-size: 1.5rem; font-weight: 800; color: var(--text-primary); }
-    .search-info-card-sub { font-size: 0.75rem; color: var(--text-tertiary); margin-top: 2px; }
+    .search-info-card::before {
+      content: attr(data-tag);
+      position: absolute; top: -10px; left: 14px;
+      font-family: var(--fx-font-stamp);
+      font-size: 0.55rem; letter-spacing: 0.2em;
+      color: var(--fx-marker);
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      padding: 3px 8px 1px;
+    }
+    .search-info-card-title { font-size: 0.8rem; color: var(--fx-ink); font-weight: 600; margin-bottom: 6px; }
+    .search-info-card-val {
+      font-family: var(--fx-font-mono);
+      font-size: 1.5rem; font-weight: 600; color: var(--fx-manila);
+      font-variant-numeric: tabular-nums; line-height: 1.15;
+    }
+    .search-info-card-sub { font-size: 0.75rem; color: var(--fx-muted); margin-top: 4px; }
 
     /* RESULTS SCREEN */
     #screen-results { padding: 0; }
@@ -704,7 +981,7 @@
       border-radius: 4px 12px 12px 12px;
     }
     .chat-msg.user .chat-bubble {
-      background: var(--accent); color: #fff;
+      background: var(--fx-marker); color: var(--fx-marker-ink);
       border-radius: 12px 4px 12px 12px;
     }
     .chat-sender { font-size: 0.72rem; color: var(--text-tertiary); padding: 0 4px; }
@@ -744,13 +1021,13 @@
     }
     .assistant-input:focus { outline: none; border-color: var(--accent); }
     .assistant-send {
-      background: var(--accent); color: #fff;
+      background: var(--fx-marker); color: var(--fx-marker-ink);
       border-radius: 8px; padding: 10px 16px;
       font-size: 0.875rem; font-weight: 600;
       transition: background 0.15s;
       display: flex; align-items: center;
     }
-    .assistant-send:hover { background: var(--accent-hover); }
+    .assistant-send:hover { background: var(--fx-marker-hover); }
     .assistant-send svg { width: 16px; height: 16px; }
 
     /* REPORT MODAL */
@@ -809,12 +1086,12 @@
     .modal-footer { padding: 0 32px 28px; display: flex; gap: 12px; justify-content: flex-end; }
     .btn-download {
       display: inline-flex; align-items: center; gap: 8px;
-      background: var(--accent); color: #fff;
+      background: var(--fx-marker); color: var(--fx-marker-ink);
       border-radius: 8px; padding: 10px 22px;
       font-weight: 600; font-size: 0.875rem;
       transition: background 0.15s;
     }
-    .btn-download:hover { background: var(--accent-hover); }
+    .btn-download:hover { background: var(--fx-marker-hover); }
     .btn-download svg { width: 15px; height: 15px; }
     .btn-modal-cancel {
       background: var(--bg); border: 1px solid var(--border);
@@ -825,12 +1102,12 @@
 
     /* FOOTER CTA */
     .footer-cta {
-      padding: 80px 0;
+      padding: 96px 0;
       background: var(--surface);
       border-top: 1px solid var(--border);
       text-align: center;
     }
-    .footer-cta h2 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.025em; margin-bottom: 12px; }
+    /* footer-cta h2 typography is defined in the lower-page case-file block above */
     .footer-cta p { color: var(--text-secondary); margin-bottom: 32px; }
     .site-footer {
       background: var(--bg); border-top: 1px solid var(--border);
@@ -882,15 +1159,15 @@
       z-index: 999;
       width: 56px; height: 56px;
       border-radius: 50%;
-      background: var(--accent);
-      color: #fff;
+      background: var(--fx-marker);
+      color: var(--fx-marker-ink);
       border: none;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
       box-shadow: 0 2px 10px rgba(var(--accent-rgb), 0.3), 0 1px 4px rgba(0,0,0,0.4);
       transition: background 0.15s, transform 0.15s;
     }
-    .fab:hover { background: var(--accent-hover); transform: scale(1.06); }
+    .fab:hover { background: var(--fx-marker-hover); transform: scale(1.06); }
     .fab:active { transform: scale(0.97); }
     .fab svg { width: 24px; height: 24px; pointer-events: none; }
     /* When the assistant panel is open the FAB shows an X */
@@ -912,10 +1189,10 @@
       --text-primary: #111827;
       --text-secondary: #4B5563;
       --text-tertiary: #6B7280;
-      --accent: #2563EB;
-      --accent-light: #EFF6FF;
-      --accent-mid: #1D4ED8;
-      --accent-hover: #1E40AF;
+      --accent: #9C6218;
+      --accent-light: #F8EFDC;
+      --accent-mid: #8A5514;
+      --accent-hover: #B97A20;
       --risk-green: #16A34A;
       --risk-green-bg: #DCFCE7;
       --risk-amber: #D97706;
@@ -924,7 +1201,7 @@
       --risk-red-bg: #FEE2E2;
       --shadow-card: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
       --shadow-elevated: 0 4px 20px rgba(0,0,0,0.08), 0 1px 6px rgba(0,0,0,0.04);
-      --accent-rgb: 37, 99, 235;
+      --accent-rgb: 156, 98, 24;
     
       --text-primary-rgb: 17, 24, 39;
       --risk-green-rgb: 22, 163, 74;
@@ -943,67 +1220,100 @@
 <nav class="topnav" role="navigation" aria-label="Main navigation">
   <div class="topnav-inner">
     <div class="topnav-logo">
-      <div class="topnav-logo-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/><path d="M11 8v6M8 11h6"/>
+      <div class="topnav-logo-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M4 19a8 8 0 0 1 16 0"/><path d="m12 19 4.2-6.5"/>
         </svg>
       </div>
-      FlowTrace
+      FLOWTRACE
     </div>
-        <div class="topnav-actions" style="display:flex; align-items:center; gap:16px;">
-          <div class="account-state" id="accountState" aria-live="polite"></div>
+    <div class="topnav-links">
+      <a href="#how">Method</a>
+      <a href="#features">Capabilities</a>
+    </div>
+    <div class="topnav-actions">
+      <div class="account-state" id="accountState" aria-live="polite"></div>
       <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle light/dark mode">
         <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
         <svg class="moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" style="display:none;"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
       </button>
-          <button class="topnav-cta" onclick="scrollToTool()" id="nav-launch-btn">Launch demo</button>
+      <button class="topnav-cta" onclick="scrollToTool()" id="nav-launch-btn">Open FlowTrace</button>
     </div>
   </div>
 </nav>
 
 <!-- HERO -->
 <section class="hero" id="hero" aria-labelledby="hero-headline">
-  <canvas id="hero-network-canvas" class="hero-network-canvas" aria-hidden="true"></canvas>
   <div class="hero-inner">
-    <div class="hero-badge">
-      <span class="hero-badge-dot"></span>
-      Built for investigators, not blockchain experts
+    <div class="hero-copy">
+      <p class="hero-kicker">Case File &middot; Wallet Risk Intelligence</p>
+      <h1 id="hero-headline">Wallet risk intelligence<br>for <span>law enforcement investigators</span></h1>
+      <p class="hero-sub">FlowTrace helps investigators quickly assess wallet risk, trace transaction flows, and generate case-ready reports &mdash; no blockchain expertise required.</p>
+      <div class="hero-actions">
+        <button class="btn-primary" onclick="scrollToTool()" id="hero-launch-btn">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          Open FlowTrace
+        </button>
+        <a class="hero-ghost" href="#how">Read the method
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+        </a>
+      </div>
+      <p class="hero-meta"><b>Engine</b> 4-signal risk scoring <b>Feeds</b> Alchemy + OFAC SDN <b>Access</b> Invitation-only</p>
     </div>
-    <h1 id="hero-headline">Wallet risk intelligence<br>for <span>law enforcement investigators</span></h1>
-    <p class="hero-sub">FlowTrace helps investigators quickly assess wallet risk, trace transaction flows, and generate case-ready reports &mdash; no blockchain expertise required.</p>
-    <div class="hero-actions">
-      <button class="btn-primary" onclick="scrollToTool()" id="hero-launch-btn">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/>
-        </svg>
-        Launch demo
-      </button>
-      <span class="hero-microcopy">No blockchain expertise required</span>
-    </div>
+    <aside class="fx-board" aria-label="Sample case exhibit">
+      <div class="fx-tag">
+        <div class="fx-tag-head">
+          <span class="fx-tag-exhibit">EXHIBIT A</span>
+          <span class="fx-tag-case">CASE FILE 001 / WALLET-04</span>
+        </div>
+        <p class="fx-tag-addr">Subject wallet&nbsp; 0x9aD3&hellip;</p>
+        <div class="fx-graph-wrap">
+          <canvas id="exhibit-graph" aria-hidden="true"></canvas>
+        </div>
+        <div class="fx-tag-foot">
+          <div class="fx-gauge">
+            <svg viewBox="0 0 120 66" aria-hidden="true">
+              <path d="M10 60 A50 50 0 0 1 110 60" fill="none" stroke="rgba(36,28,16,0.22)" stroke-width="8" stroke-linecap="round"/>
+              <path d="M10 60 A50 50 0 0 1 108.4 47.6" fill="none" stroke="#8E2F26" stroke-width="8" stroke-linecap="round"/>
+              <path d="M60 60 L96.8 50.6" stroke="#241C10" stroke-width="2.5" stroke-linecap="round"/>
+              <circle cx="60" cy="60" r="3.5" fill="#241C10"/>
+            </svg>
+            <span class="fx-gauge-val">Risk score<strong>92 / 100 &middot; HIGH</strong></span>
+          </div>
+          <span class="fx-stamp">FLAGGED</span>
+        </div>
+      </div>
+      <p class="fx-caption">Illustrative case data &middot; rendered by the FlowTrace engine</p>
+    </aside>
   </div>
 </section>
 
 
 <!-- STAT ROW -->
-<section class="stat-row" aria-label="Demo statistics">
+<section class="stat-row" aria-label="Key facts">
   <div class="stat-row-inner">
     <div class="stat-item">
-      <div class="stat-number">5</div>
-      <div class="stat-label">Wallets in demo dataset</div>
+      <span class="stat-index">ITEM 01</span>
+      <div class="stat-number">05</div>
+      <div class="stat-label">Sample wallets pre-loaded to explore</div>
     </div>
     <div class="stat-item">
-      <div class="stat-number">3</div>
-      <div class="stat-label">Risk factors tracked per wallet</div>
+      <span class="stat-index">ITEM 02</span>
+      <div class="stat-number">04</div>
+      <div class="stat-label">Risk signals scored per wallet</div>
     </div>
     <div class="stat-item">
-      <div class="stat-number">0</div>
+      <span class="stat-index">ITEM 03</span>
+      <div class="stat-number">00</div>
       <div class="stat-label">Blockchain expertise required to use it</div>
     </div>
   </div>
 </section>
 
 <!-- HOW IT WORKS -->
-<section class="how-it-works section" aria-labelledby="how-title">
+<section class="how-it-works section" id="how" aria-labelledby="how-title">
   <div class="container">
     <p class="section-label">How it works</p>
     <h2 class="section-title" id="how-title">From wallet address to investigation report in seconds</h2>
@@ -1043,12 +1353,13 @@
 </section>
 
 <!-- FEATURE GRID -->
-<section class="features section" aria-labelledby="features-title">
+<section class="features section" id="features" aria-labelledby="features-title">
   <div class="container">
     <p class="section-label">Capabilities</p>
     <h2 class="section-title" id="features-title">Everything an investigator needs</h2>
     <div class="feature-grid">
-      <div class="feature-card">
+      <div class="feature-card" data-tab="FILE F-01">
+        <span class="how-step">01</span>
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/>
@@ -1057,7 +1368,8 @@
         <h3 class="feature-title">Wallet Risk Scoring</h3>
         <p class="feature-desc">0&ndash;100 gauge with color-coded severity: green, amber, or red at a glance.</p>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" data-tab="FILE F-02">
+        <span class="how-step">02</span>
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
@@ -1067,7 +1379,8 @@
         <h3 class="feature-title">Transaction Flow Graph</h3>
         <p class="feature-desc">Visualize fund movement across linked wallets in an interactive node graph.</p>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" data-tab="FILE F-03">
+        <span class="how-step">03</span>
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -1077,7 +1390,8 @@
         <h3 class="feature-title">One-Click Investigation Report</h3>
         <p class="feature-desc">Generate a shareable, structured case summary ready for internal review.</p>
       </div>
-      <div class="feature-card">
+      <div class="feature-card" data-tab="FILE F-04">
+        <span class="how-step">04</span>
         <div class="feature-icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
@@ -1091,12 +1405,23 @@
   </div>
 </section>
 
+<!-- TEAR STRIP -->
+<div class="fx-tear-band">
+  <div class="fx-tear">
+    <span class="fx-tear-rule" aria-hidden="true"></span>
+    <button class="fx-tear-btn" onclick="scrollToTool()">Open the case file
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+    </button>
+    <span class="fx-tear-rule" aria-hidden="true"></span>
+  </div>
+</div>
+
 <!-- TOOL SECTION -->
 <section class="tool-section" id="tool-section" aria-labelledby="tool-section-title">
   <div class="container">
-    <p class="section-label">Interactive Demo</p>
-    <h2 class="section-title" id="tool-section-title">Try FlowTrace now</h2>
-    <p style="color:var(--text-secondary);font-size:0.9rem;margin-bottom:32px;">Click any example wallet address below to see the full analysis.</p>
+    <p class="section-label">Interactive analysis</p>
+    <h2 class="section-title" id="tool-section-title">Try <span>FlowTrace</span> now</h2>
+    <p class="tool-section-note">Enter any wallet address below &mdash; or try one of these.</p>
 
     <div class="tool-container" id="tool-container">
       <!-- window chrome -->
@@ -1113,7 +1438,6 @@
             My Cases
             <span id="casesCountBadge" class="cases-badge hidden">0</span>
           </button>
-          <div class="chrome-badge" id="modeBadge">Loading…</div>
         </div>
       </div>
 
@@ -1161,7 +1485,7 @@
           <div class="tool-header">
             <div class="tool-logo">
               <div class="tool-logo-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <svg viewBox="0 0 24 24" fill="none" stroke="#1A140A" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
                   <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/><path d="M11 8v6M8 11h6"/>
                 </svg>
               </div>
@@ -1196,7 +1520,7 @@
             <div class="recent-chips" id="recent-chips" role="list"></div>
           </div>
 
-          <p class="example-label">Example wallet addresses &mdash; click to analyze:</p>
+          <p class="example-label">Try one of these &mdash; click to analyze:</p>
           <div class="example-chips" id="example-chips" role="list" aria-label="Example wallets">
             <div class="example-chip" role="listitem" tabindex="0" onclick="selectChip(this)" data-wallet="0x7fC2a9B4d8E1c6A3f0D5b7E9a1C4d6F8b2E0a3C7">0x7fC2a9B4d8E1c6A3f0D5b7E9a1C4d6F8b2E0a3C7</div>
             <div class="example-chip" role="listitem" tabindex="0" onclick="selectChip(this)" data-wallet="0xC4e7A1d9F2b6c8E0a5D3f7B1c9A4e6D8b0F2a7C1">0xC4e7A1d9F2b6c8E0a5D3f7B1c9A4e6D8b0F2a7C1</div>
@@ -1206,17 +1530,12 @@
           </div>
 
           <div class="search-info-row">
-            <div class="search-info-card">
-              <div class="search-info-card-title">Demo Dataset</div>
-              <div class="search-info-card-val">5</div>
-              <div class="search-info-card-sub">Pre-loaded wallet profiles</div>
-            </div>
-            <div class="search-info-card">
+            <div class="search-info-card" data-tag="EXHIBIT B">
               <div class="search-info-card-title">Risk Scoring</div>
               <div class="search-info-card-val">0&ndash;100</div>
               <div class="search-info-card-sub">Color-coded severity gauge</div>
             </div>
-            <div class="search-info-card">
+            <div class="search-info-card" data-tag="EXHIBIT C">
               <div class="search-info-card-title">AI Assistant</div>
               <div class="search-info-card-val">Live</div>
               <div class="search-info-card-sub">Plain-English explanations</div>
@@ -1339,20 +1658,21 @@
 <!-- FOOTER CTA -->
 <section class="footer-cta" aria-labelledby="footer-cta-title">
   <div class="container">
-    <h2 id="footer-cta-title">See how FlowTrace can support your investigations</h2>
+    <p class="section-label">Closing note</p>
+    <h2 id="footer-cta-title">See how FlowTrace can <span>support your investigations</span></h2>
     <p>Step-by-step, wallet by wallet &mdash; no technical background required.</p>
     <button class="btn-primary" onclick="scrollToTool()" id="footer-launch-btn">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
         <circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/>
       </svg>
-      Launch demo
+      Launch FlowTrace
     </button>
   </div>
 </section>
 
 <!-- SITE FOOTER -->
 <footer class="site-footer" role="contentinfo">
-  <p><strong>FlowTrace</strong> &middot; Prototype demo, not a production system</p>
+  <p><strong>FlowTrace</strong> &middot; Wallet risk intelligence for investigative teams</p>
 </footer>
 
 <!-- AI ASSISTANT PANEL -->
@@ -1387,7 +1707,7 @@
         </svg>
       </button>
     </div>
-    <p style="font-size:0.68rem;color:var(--text-tertiary);text-align:center;margin:8px 0 0;line-height:1.4;">Powered by Claude via OpenRouter &middot; Demo dataset, not live blockchain data</p>
+    <p style="font-size:0.68rem;color:var(--text-tertiary);text-align:center;margin:8px 0 0;line-height:1.4;">AI explanations powered by Claude via OpenRouter</p>
   </div>
 </div>
 
@@ -1444,7 +1764,7 @@
         </div>
         <div class="report-row">
           <span class="report-key">Generated By</span>
-          <span class="report-val">FlowTrace Demo</span>
+          <span class="report-val">FlowTrace</span>
         </div>
         <div class="report-disclaimer">
           &#9888; Risk scores are investigative leads, not legal proof. Identifying a real person behind a wallet requires exchange KYC data obtained through legal process. This report is for internal investigative use only.
@@ -1663,8 +1983,6 @@ async function apiFetch(path, options = {}) {
 function renderAccountState() {
   const root = document.getElementById('accountState');
   root.replaceChildren();
-  const modeBadge = document.getElementById('modeBadge');
-  modeBadge.textContent = isProductionMode() ? 'Production' : 'Demo Mode';
   if (!appAuth.session || !appAuth.profile) {
     const login = document.createElement('button');
     login.className = 'account-link'; login.textContent = 'Sign in'; login.onclick = () => openAuthModal();
@@ -2767,10 +3085,10 @@ function getResponse(text) {
       return 'FlowTrace analyzes wallet transaction patterns against known risk indicators \u2014 like mixer use, circular transactions, and links to flagged addresses \u2014 to generate a risk score investigators can act on.';
     }
     if (lower.includes('data')) {
-      return 'This demo uses a small set of mock wallets to demonstrate the workflow. A production version would connect to real blockchain data sources.';
+      return 'FlowTrace scores wallets against sanctions exposure and transaction-flow patterns, drawing on live Alchemy data and the OFAC SDN list. Ask me about any wallet you load.';
     }
     if (lower.includes('start') || lower.includes('begin')) {
-      return 'Enter any wallet address in the search bar, or click one of the example addresses to see a full risk analysis.';
+      return 'Enter any wallet address in the search bar, or click one of the sample wallets to see a full risk analysis.';
     }
     if (lower.includes('mixer') || lower.includes('tumbler')) {
       return 'A <strong>mixer</strong> (also called a tumbler) blends funds from many users to obscure which funds came from which sender \u2014 used to break the traceable link between a wallet and its on-chain history.';
@@ -2987,101 +3305,116 @@ document.addEventListener('keydown', e => {
   if (e.key === 'Escape') { closeAssistant(); closeReport(); }
 });
 // ==========================================
-// HERO AMBIENT NETWORK ANIMATION
+// EXHIBIT BOARD — INK FLOW GRAPH
+// Renders the sample wallet's illustrative topology
+// (subject node + counterparties) as ink on
+// the manila evidence tag in the hero.
 // ==========================================
-(function initHeroNetwork() {
-  const canvas = document.getElementById('hero-network-canvas');
+(function initExhibitGraph() {
+  const canvas = document.getElementById('exhibit-graph');
   if (!canvas) return;
-  const ctx = canvas.getContext('2d', { alpha: true });
-  let width, height;
-  let particles = [];
-  const MAX_PARTICLES = 22;
-  const CONNECTION_DIST = 180;
-  let isVisible = true;
-  let animId = null;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const INK = '36,28,16';
+  const OXIDE = '#8E2F26';
+  const CENTER = { x: 0.52, y: 0.50 };
+  const NODES = [
+    { x: 0.15, y: 0.20, out: false },
+    { x: 0.11, y: 0.74, out: false },
+    { x: 0.37, y: 0.93, out: false },
+    { x: 0.87, y: 0.24, out: true },
+    { x: 0.89, y: 0.76, out: true }
+  ];
+  const SPEEDS = [0.00042, 0.00031, 0.00052, 0.00037, 0.00047];
+  let W = 0, H = 0, rafId = null, visible = true;
+  const start = performance.now();
 
-  function resize() {
-    width = canvas.parentElement.offsetWidth;
-    height = canvas.parentElement.offsetHeight;
-    canvas.width = width * window.devicePixelRatio;
-    canvas.height = height * window.devicePixelRatio;
-    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    initParticles();
+  function sizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
+    const dpr = window.devicePixelRatio || 1;
+    W = rect.width; H = rect.height;
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
 
-  function initParticles() {
-    particles = [];
-    for (let i = 0; i < MAX_PARTICLES; i++) {
-      particles.push({
-        x: Math.random() * width,
-        y: Math.random() * height,
-        vx: (Math.random() - 0.5) * 0.15, // Barely perceptible drift
-        vy: (Math.random() - 0.5) * 0.15,
-        radius: Math.random() * 1.5 + 1
-      });
-    }
-  }
+  function drawFrame(now) {
+    if (!W || !H) return;
+    ctx.clearRect(0, 0, W, H);
+    NODES.forEach((n, i) => {
+      const sx = (n.out ? CENTER.x : n.x) * W, sy = (n.out ? CENTER.y : n.y) * H;
+      const ex = (n.out ? n.x : CENTER.x) * W, ey = (n.out ? n.y : CENTER.y) * H;
+      const mx = (sx + ex) / 2, my = (sy + ey) / 2;
+      const px = mx + (sy - ey) * 0.12, py = my - (sx - ex) * 0.12;
 
-  function draw() {
-    if (!isVisible) return;
-    ctx.clearRect(0, 0, width, height);
-    
-    // Update & draw particles
-    ctx.fillStyle = `rgba(${getCssVar('--accent-rgb')}, 0.15)`; // --accent at very low opacity
-    particles.forEach(p => {
-      p.x += p.vx;
-      p.y += p.vy;
-      // Bounce off edges smoothly
-      if (p.x < 0 || p.x > width) p.vx *= -1;
-      if (p.y < 0 || p.y > height) p.vy *= -1;
-      
+      ctx.strokeStyle = 'rgba(' + INK + ',0.55)';
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      ctx.moveTo(sx, sy);
+      ctx.quadraticCurveTo(px, py, ex, ey);
+      ctx.stroke();
+
+      const ang = Math.atan2(ey - py, ex - px);
+      ctx.fillStyle = 'rgba(' + INK + ',0.7)';
+      ctx.beginPath();
+      ctx.moveTo(ex, ey);
+      ctx.lineTo(ex - 8 * Math.cos(ang - 0.38), ey - 8 * Math.sin(ang - 0.38));
+      ctx.lineTo(ex - 8 * Math.cos(ang + 0.38), ey - 8 * Math.sin(ang + 0.38));
+      ctx.closePath();
+      ctx.fill();
+
+      if (!reduceMotion.matches && visible) {
+        const t = ((now - start) * SPEEDS[i]) % 1;
+        const q = 1 - t;
+        const dx = q * q * sx + 2 * q * t * px + t * t * ex;
+        const dy = q * q * sy + 2 * q * t * py + t * t * ey;
+        ctx.beginPath();
+        ctx.arc(dx, dy, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.fillStyle = 'rgba(' + INK + ',0.85)';
+      ctx.beginPath();
+      ctx.arc(n.x * W, n.y * H, 4, 0, Math.PI * 2);
       ctx.fill();
     });
 
-    // Draw connections
-    ctx.lineWidth = 0.5;
-    for (let i = 0; i < particles.length; i++) {
-      for (let j = i + 1; j < particles.length; j++) {
-        const dx = particles[i].x - particles[j].x;
-        const dy = particles[i].y - particles[j].y;
-        const distSq = dx*dx + dy*dy;
-        const maxDistSq = CONNECTION_DIST * CONNECTION_DIST;
-        
-        if (distSq < maxDistSq) {
-          const opacity = (1 - Math.sqrt(distSq) / CONNECTION_DIST) * 0.12;
-          ctx.strokeStyle = `rgba(${getCssVar('--accent-rgb')}, ${opacity})`;
-          ctx.beginPath();
-          ctx.moveTo(particles[i].x, particles[i].y);
-          ctx.lineTo(particles[j].x, particles[j].y);
-          ctx.stroke();
-        }
-      }
-    }
-    
-    animId = requestAnimationFrame(draw);
+    const cx = CENTER.x * W, cy = CENTER.y * H;
+    ctx.strokeStyle = 'rgb(' + INK + ')';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = OXIDE;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3.2, 0, Math.PI * 2);
+    ctx.fill();
   }
 
-  window.addEventListener('resize', () => {
-    if (animId) cancelAnimationFrame(animId);
-    resize();
-    if (isVisible) draw();
-  });
+  function tick(now) {
+    drawFrame(now);
+    if (visible && !reduceMotion.matches) rafId = requestAnimationFrame(tick);
+  }
 
-  // Pause when out of view
-  const observer = new IntersectionObserver((entries) => {
-    isVisible = entries[0].isIntersecting;
-    if (isVisible) {
-      if (animId) cancelAnimationFrame(animId);
-      draw();
-    } else {
-      if (animId) cancelAnimationFrame(animId);
-    }
-  }, { threshold: 0 });
-  observer.observe(canvas.parentElement);
+  function run() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    if (visible && !reduceMotion.matches) rafId = requestAnimationFrame(tick);
+    else drawFrame(performance.now());
+  }
 
-  resize();
+  new IntersectionObserver((entries) => {
+    visible = entries[0].isIntersecting;
+    run();
+  }, { threshold: 0 }).observe(canvas);
+
+  window.addEventListener('resize', () => { sizeCanvas(); run(); });
+  if (typeof reduceMotion.addEventListener === 'function') {
+    reduceMotion.addEventListener('change', () => { sizeCanvas(); run(); });
+  }
+  sizeCanvas();
+  run();
 })();
 
 </script>
